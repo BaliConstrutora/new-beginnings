@@ -109,18 +109,12 @@ function EquipamentosTab() {
         </div>
         <div className="space-y-1.5">
           <Label className="text-sm font-semibold">Descrição do Equipamento</Label>
-          <Select value={descricao} onValueChange={setDescricao}>
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {DESCRICOES_EQUIPAMENTO.map((d) => (
-                <SelectItem key={d} value={d}>
-                  {d}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Input
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            placeholder="Ex: Trator de Esteira D8"
+            className="h-12"
+          />
         </div>
         <Button type="submit" className="h-12 w-full font-bold">
           Salvar Equipamento
