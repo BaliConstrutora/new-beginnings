@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CadastrosRouteImport } from './routes/cadastros'
 import { Route as ApontamentoRouteImport } from './routes/apontamento'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/apontamento': typeof ApontamentoRoute
   '/cadastros': typeof CadastrosRoute
   '/dashboard': typeof DashboardRoute
+  '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/apontamento': typeof ApontamentoRoute
   '/cadastros': typeof CadastrosRoute
   '/dashboard': typeof DashboardRoute
+  '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,20 @@ export interface FileRoutesById {
   '/apontamento': typeof ApontamentoRoute
   '/cadastros': typeof CadastrosRoute
   '/dashboard': typeof DashboardRoute
+  '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apontamento' | '/cadastros' | '/dashboard'
+  fullPaths: '/' | '/apontamento' | '/cadastros' | '/dashboard' | '/relatorios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apontamento' | '/cadastros' | '/dashboard'
-  id: '__root__' | '/' | '/apontamento' | '/cadastros' | '/dashboard'
+  to: '/' | '/apontamento' | '/cadastros' | '/dashboard' | '/relatorios'
+  id:
+    | '__root__'
+    | '/'
+    | '/apontamento'
+    | '/cadastros'
+    | '/dashboard'
+    | '/relatorios'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,10 +82,18 @@ export interface RootRouteChildren {
   ApontamentoRoute: typeof ApontamentoRoute
   CadastrosRoute: typeof CadastrosRoute
   DashboardRoute: typeof DashboardRoute
+  RelatoriosRoute: typeof RelatoriosRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/dashboard': {
       id: '/dashboard'
       path: '/dashboard'
@@ -107,17 +130,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApontamentoRoute: ApontamentoRoute,
   CadastrosRoute: CadastrosRoute,
   DashboardRoute: DashboardRoute,
+  RelatoriosRoute: RelatoriosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
