@@ -8,6 +8,7 @@ const items = [
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname === "/") return null;
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 border-t-2 border-border bg-card pb-[env(safe-area-inset-bottom)]">
