@@ -81,7 +81,7 @@ function RelatoriosPage() {
 
   return (
     <div className="min-h-screen pb-24 bg-background">
-      <AppHeader title="Relatórios" />
+      <AppHeader />
       <main className="mx-auto max-w-screen-sm px-4 py-4 space-y-4">
         <section className="rounded-xl border-2 border-border bg-card p-4 space-y-3">
           <h2 className="text-sm font-bold uppercase tracking-wide">Filtro</h2>
