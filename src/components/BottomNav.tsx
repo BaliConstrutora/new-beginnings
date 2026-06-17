@@ -1,10 +1,11 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutDashboard, ClipboardList, Database } from "lucide-react";
+import { LayoutDashboard, ClipboardList, Database, FileBarChart2 } from "lucide-react";
 
 const items = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/apontamento", label: "Apontamento", icon: ClipboardList },
+  { to: "/apontamento", label: "Apontar", icon: ClipboardList },
   { to: "/cadastros", label: "Cadastros", icon: Database },
+  { to: "/relatorios", label: "Relatórios", icon: FileBarChart2 },
 ] as const;
 
 export function BottomNav() {
@@ -13,7 +14,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 border-t-2 border-border bg-card pb-[env(safe-area-inset-bottom)]">
-      <ul className="mx-auto grid max-w-screen-sm grid-cols-3">
+      <ul className="mx-auto grid max-w-screen-sm grid-cols-4">
         {items.map(({ to, label, icon: Icon }) => {
           const active = pathname === to;
           return (
