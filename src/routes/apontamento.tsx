@@ -1,7 +1,7 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Database } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useObra } from "@/lib/obra-store";
+import { useEquipamentos, useMaoObra } from "@/lib/cadastros-store";
 
 export const Route = createFileRoute("/apontamento")({
   head: () => ({
@@ -27,7 +28,7 @@ export const Route = createFileRoute("/apontamento")({
       {
         name: "description",
         content:
-          "Registro diário de condições, localização, mão de obra, equipamentos e produção.",
+          "Registro diário de condições, mão de obra, equipamentos e produção.",
       },
     ],
   }),
@@ -52,6 +53,13 @@ type MoIndireta = Row & {
   qtd: string;
   horasNormais: string;
 };
+type Producao = Row & {
+  servico: string;
+  quantidade: string;
+  unidade: string;
+  estacaInicial: string;
+  estacaFinal: string;
+};
 
 const newId = () => Date.now() + Math.floor(Math.random() * 1000);
 const emptyEquip = (): Equip => ({
@@ -74,18 +82,65 @@ const emptyIndireta = (): MoIndireta => ({
   qtd: "",
   horasNormais: "",
 });
+const emptyProducao = (): Producao => ({
+  id: newId(),
+  servico: "",
+  quantidade: "",
+  unidade: "",
+  estacaInicial: "",
+  estacaFinal: "",
+});
+
+const SERVICOS = [
+  ["corte", "Corte"],
+  ["aterro", "Aterro"],
+  ["bota-fora", "Bota-fora"],
+  ["compactacao", "Compactação"],
+] as const;
+
+const UNIDADES = [
+  ["m3", "m³"],
+  ["m2", "m²"],
+  ["m", "m"],
+  ["t", "t"],
+] as const;
 
 function Apontamento() {
   const hoje = new Date().toISOString().slice(0, 10);
   const navigate = useNavigate();
   const obra = useObra();
+  const equipamentosCad = useEquipamentos();
+  const maoObraCad = useMaoObra();
+
+  const funcoesDiretas = useMemo(
+    () =>
+      maoObraCad
+        .filter((m) => m.categoria === "direta")
+        .map((m) => [m.id, m.funcao] as [string, string]),
+    [maoObraCad],
+  );
+  const funcoesIndiretas = useMemo(
+    () =>
+      maoObraCad
+        .filter((m) => m.categoria === "indireta")
+        .map((m) => [m.id, m.funcao] as [string, string]),
+    [maoObraCad],
+  );
+  const equipamentosOptions = useMemo(
+    () =>
+      equipamentosCad.map(
+        (e) => [e.id, `${e.prefixo} — ${e.descricao}`] as [string, string],
+      ),
+    [equipamentosCad],
+  );
 
   const [direta, setDireta] = useState<MoDireta[]>([emptyDireta()]);
   const [indireta, setIndireta] = useState<MoIndireta[]>([emptyIndireta()]);
   const [equipamentos, setEquipamentos] = useState<Equip[]>([emptyEquip()]);
+  const [producao, setProducao] = useState<Producao[]>([emptyProducao()]);
 
   useEffect(() => {
-    if (!obra) navigate({ to: "/" });
+    if (typeof window !== "undefined" && !obra) navigate({ to: "/" });
   }, [obra, navigate]);
 
   const remove = <T extends Row>(list: T[], id: number) =>
@@ -103,7 +158,7 @@ function Apontamento() {
       <header>
         <h1 className="text-2xl font-bold">Apontamento Diário</h1>
         <p className="text-sm text-muted-foreground">
-          Preencha as 5 etapas e salve no final.
+          Preencha as etapas e salve no final.
         </p>
       </header>
 
@@ -115,7 +170,7 @@ function Apontamento() {
       >
         <Step value="condicoes" n={1} title="Condições">
           <Field label="Data">
-            <Input type="date" value={hoje} readOnly className="h-12" />
+            <Input type="date" defaultValue={hoje} readOnly className="h-12" />
           </Field>
           <Field label="Clima">
             <Dropdown
@@ -141,17 +196,9 @@ function Apontamento() {
           </Field>
         </Step>
 
-        <Step value="localizacao" n={2} title="Localização">
-          <Field label="Estaca Inicial">
-            <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-          </Field>
-          <Field label="Estaca Final">
-            <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-          </Field>
-        </Step>
-
-        <Step value="mao-obra" n={3} title="Mão de Obra">
+        <Step value="mao-obra" n={2} title="Mão de Obra">
           <SubSection title="Direta (Produção)">
+            {funcoesDiretas.length === 0 && <EmptyCadastro tipo="funções diretas" />}
             {direta.map((r, idx) => (
               <RowCard
                 key={r.id}
@@ -164,14 +211,11 @@ function Apontamento() {
               >
                 <Field label="Função">
                   <Dropdown
-                    placeholder="Selecione"
-                    options={[
-                      ["operador", "Operador"],
-                      ["servente", "Servente"],
-                      ["pedreiro", "Pedreiro"],
-                      ["carpinteiro", "Carpinteiro"],
-                      ["armador", "Armador"],
-                    ]}
+                    placeholder={
+                      funcoesDiretas.length ? "Selecione" : "Cadastre antes"
+                    }
+                    options={funcoesDiretas}
+                    disabled={funcoesDiretas.length === 0}
                   />
                 </Field>
                 <Field label="Quantidade de Pessoas">
@@ -193,6 +237,9 @@ function Apontamento() {
           <div className="my-4 h-px bg-border" />
 
           <SubSection title="Indireta (Apoio)">
+            {funcoesIndiretas.length === 0 && (
+              <EmptyCadastro tipo="funções indiretas" />
+            )}
             {indireta.map((r, idx) => (
               <RowCard
                 key={r.id}
@@ -205,14 +252,11 @@ function Apontamento() {
               >
                 <Field label="Função">
                   <Dropdown
-                    placeholder="Selecione"
-                    options={[
-                      ["encarregado", "Encarregado"],
-                      ["mestre-obras", "Mestre de obras"],
-                      ["apontador", "Apontador"],
-                      ["almoxarife", "Almoxarife"],
-                      ["tec-seguranca", "Téc. Segurança"],
-                    ]}
+                    placeholder={
+                      funcoesIndiretas.length ? "Selecione" : "Cadastre antes"
+                    }
+                    options={funcoesIndiretas}
+                    disabled={funcoesIndiretas.length === 0}
                   />
                 </Field>
                 <Field label="Quantidade de Pessoas">
@@ -229,7 +273,8 @@ function Apontamento() {
           </SubSection>
         </Step>
 
-        <Step value="equipamentos" n={4} title="Equipamentos">
+        <Step value="equipamentos" n={3} title="Equipamentos">
+          {equipamentosOptions.length === 0 && <EmptyCadastro tipo="equipamentos" />}
           {equipamentos.map((eq, idx) => (
             <RowCard
               key={eq.id}
@@ -242,13 +287,11 @@ function Apontamento() {
             >
               <Field label="Equipamento">
                 <Dropdown
-                  placeholder="Selecione"
-                  options={[
-                    ["escavadeira", "Escavadeira"],
-                    ["motoniveladora", "Motoniveladora"],
-                    ["rolo", "Rolo Compactador"],
-                    ["caminhao", "Caminhão Basculante"],
-                  ]}
+                  placeholder={
+                    equipamentosOptions.length ? "Selecione" : "Cadastre antes"
+                  }
+                  options={equipamentosOptions}
+                  disabled={equipamentosOptions.length === 0}
                 />
               </Field>
               <Field label="Horímetro Inicial">
@@ -267,32 +310,58 @@ function Apontamento() {
           </AddButton>
         </Step>
 
-        <Step value="producao" n={5} title="Produção">
-          <Field label="Serviço Executado">
-            <Dropdown
-              placeholder="Selecione"
-              options={[
-                ["corte", "Corte"],
-                ["aterro", "Aterro"],
-                ["bota-fora", "Bota-fora"],
-                ["compactacao", "Compactação"],
-              ]}
-            />
-          </Field>
-          <Field label="Quantidade">
-            <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-          </Field>
-          <Field label="Unidade">
-            <Dropdown
-              placeholder="Selecione"
-              options={[
-                ["m3", "m³"],
-                ["m2", "m²"],
-                ["m", "m"],
-                ["t", "t"],
-              ]}
-            />
-          </Field>
+        <Step value="producao" n={4} title="Produção">
+          {producao.map((p, idx) => (
+            <RowCard
+              key={p.id}
+              label={`Serviço ${idx + 1}`}
+              onRemove={
+                producao.length > 1
+                  ? () => setProducao((prev) => remove(prev, p.id))
+                  : undefined
+              }
+            >
+              <Field label="Serviço Executado">
+                <Dropdown placeholder="Selecione" options={SERVICOS} />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Quantidade">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    className="h-12"
+                  />
+                </Field>
+                <Field label="Unidade">
+                  <Dropdown placeholder="Un." options={UNIDADES} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Estaca Inicial">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    required
+                    className="h-12"
+                  />
+                </Field>
+                <Field label="Estaca Final">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder="0"
+                    required
+                    className="h-12"
+                  />
+                </Field>
+              </div>
+            </RowCard>
+          ))}
+          <AddButton onClick={() => setProducao((p) => [...p, emptyProducao()])}>
+            Adicionar mais um serviço
+          </AddButton>
         </Step>
       </Accordion>
 
@@ -300,6 +369,18 @@ function Apontamento() {
         Salvar Apontamento
       </Button>
     </form>
+  );
+}
+
+function EmptyCadastro({ tipo }: { tipo: string }) {
+  return (
+    <Link
+      to="/cadastros"
+      className="flex items-center gap-2 rounded-xl border-2 border-dashed border-amber-500/60 bg-amber-500/10 p-3 text-sm font-semibold text-amber-800 dark:text-amber-300"
+    >
+      <Database className="h-4 w-4 shrink-0" />
+      Nenhuma {tipo} cadastrada — toque para cadastrar.
+    </Link>
   );
 }
 
@@ -397,12 +478,14 @@ function AddButton({
 function Dropdown({
   placeholder,
   options,
+  disabled,
 }: {
   placeholder: string;
   options: ReadonlyArray<readonly [string, string]>;
+  disabled?: boolean;
 }) {
   return (
-    <Select>
+    <Select disabled={disabled}>
       <SelectTrigger className="h-12">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
