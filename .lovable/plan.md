@@ -1,20 +1,12 @@
 ## Diagnóstico
 
-O erro 404 não vem de uma rota faltando — todas as 4 rotas existem (`/`, `/apontamento`, `/checklist`, `/configuracoes`). O erro real no console é:
+A tela de entrada do "Bora Bora" está correta no código (Select de obra + botão Entrar), mas o preview não carrega o módulo do app — runtime error `Failed to fetch dynamically imported module: virtual:tanstack-start-client-entry`.
 
-```
-Failed to fetch dynamically imported module: .../virtual:tanstack-start-client-entry
-Invariant failed: Expected to find a match below the root match in SPA mode.
-```
-
-Isso acontece quando o navegador tem uma versão antiga do app em cache (chunks JS antigos) após o dev server ter reiniciado por causa das criações de rotas. O router tenta carregar um chunk que não existe mais e cai no boundary de 404.
+A causa está nos logs do Vite: quando removi `checklist.tsx` e `configuracoes.tsx`, o gerador de rotas do TanStack travou em estado inconsistente (`Failed to load url /src/routes/configuracoes.tsx ... Does the file exist?`). O `routeTree.gen.ts` já foi regenerado corretamente (sem essas rotas), mas o dev server continua servindo bundles antigos que tentam importar os arquivos deletados, então a página inicial nunca termina de hidratar e o dropdown nunca aparece.
 
 ## Correção
 
-1. Reiniciar o dev server do preview para servir bundles novos e consistentes.
-2. Nenhuma alteração de código é necessária — as rotas, o `BottomNav` e os `Link` do Dashboard já estão corretos.
+1. Reiniciar o dev server para forçar o Vite a descartar o cache de módulos e o plugin do TanStack Router a reler o `routeTree.gen.ts` limpo.
+2. Pedir um refresh forte (Ctrl/Cmd+Shift+R) no preview para baixar os novos chunks.
 
-Após reiniciar, basta dar um refresh forte (Ctrl/Cmd+Shift+R) no preview. Os botões "Apontamento", "Checklist" e "Config" passarão a navegar normalmente.
-
-## Fora do escopo
-Mudanças visuais ou de conteúdo nas telas Checklist / Configurações — continuam como placeholder até você pedir.
+Nenhuma alteração de código é necessária — a tela de seleção de obra, o dashboard e o apontamento já estão implementados corretamente.
