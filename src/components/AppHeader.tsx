@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { HardHat, ChevronDown } from "lucide-react";
 import { useObra, obraLabel, clearObra } from "@/lib/obra-store";
 
