@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import {
@@ -18,43 +18,78 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useObra } from "@/lib/obra-store";
 
 export const Route = createFileRoute("/apontamento")({
   head: () => ({
     meta: [
-      { title: "Apontamento Diário — Gestão de Obras" },
-      { name: "description", content: "Registro diário de condições, localização, equipamentos e produção." },
+      { title: "Apontamento Diário — Bora Bora" },
+      {
+        name: "description",
+        content:
+          "Registro diário de condições, localização, mão de obra, equipamentos e produção.",
+      },
     ],
   }),
   component: Apontamento,
 });
 
-type Equipamento = {
-  id: number;
+type Row = { id: number };
+type Equip = Row & {
   tipo: string;
   horInicial: string;
   horFinal: string;
   diesel: string;
 };
+type MoDireta = Row & {
+  funcao: string;
+  qtd: string;
+  horasNormais: string;
+  horasExtras: string;
+};
+type MoIndireta = Row & {
+  funcao: string;
+  qtd: string;
+  horasNormais: string;
+};
 
-const novoEquip = (id: number): Equipamento => ({
-  id,
+const newId = () => Date.now() + Math.floor(Math.random() * 1000);
+const emptyEquip = (): Equip => ({
+  id: newId(),
   tipo: "",
   horInicial: "",
   horFinal: "",
   diesel: "",
 });
+const emptyDireta = (): MoDireta => ({
+  id: newId(),
+  funcao: "",
+  qtd: "",
+  horasNormais: "",
+  horasExtras: "",
+});
+const emptyIndireta = (): MoIndireta => ({
+  id: newId(),
+  funcao: "",
+  qtd: "",
+  horasNormais: "",
+});
 
 function Apontamento() {
   const hoje = new Date().toISOString().slice(0, 10);
-  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([novoEquip(1)]);
+  const navigate = useNavigate();
+  const obra = useObra();
 
-  const addEquip = () =>
-    setEquipamentos((prev) => [...prev, novoEquip(Date.now())]);
-  const removeEquip = (id: number) =>
-    setEquipamentos((prev) =>
-      prev.length > 1 ? prev.filter((e) => e.id !== id) : prev,
-    );
+  const [direta, setDireta] = useState<MoDireta[]>([emptyDireta()]);
+  const [indireta, setIndireta] = useState<MoIndireta[]>([emptyIndireta()]);
+  const [equipamentos, setEquipamentos] = useState<Equip[]>([emptyEquip()]);
+
+  useEffect(() => {
+    if (!obra) navigate({ to: "/" });
+  }, [obra, navigate]);
+
+  const remove = <T extends Row>(list: T[], id: number) =>
+    list.length > 1 ? list.filter((r) => r.id !== id) : list;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +103,7 @@ function Apontamento() {
       <header>
         <h1 className="text-2xl font-bold">Apontamento Diário</h1>
         <p className="text-sm text-muted-foreground">
-          Preencha as 4 etapas e salve no final.
+          Preencha as 5 etapas e salve no final.
         </p>
       </header>
 
@@ -78,182 +113,307 @@ function Apontamento() {
         defaultValue="condicoes"
         className="space-y-3"
       >
-        <AccordionItem
-          value="condicoes"
-          className="rounded-2xl border-2 border-border bg-card px-4"
-        >
-          <AccordionTrigger className="text-base font-bold hover:no-underline">
-            <span className="flex items-center gap-3">
-              <Badge n={1} /> Condições
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
-            <Field label="Data">
-              <Input type="date" value={hoje} readOnly className="h-12" />
-            </Field>
-            <Field label="Clima">
-              <Select>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ensolarado">Ensolarado</SelectItem>
-                  <SelectItem value="nublado">Nublado</SelectItem>
-                  <SelectItem value="chuva-fraca">Chuva fraca</SelectItem>
-                  <SelectItem value="chuva-forte">Chuva forte</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Frente de Serviço">
-              <Select>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="terraplenagem">Terraplenagem</SelectItem>
-                  <SelectItem value="drenagem">Drenagem</SelectItem>
-                  <SelectItem value="pavimentacao">Pavimentação</SelectItem>
-                  <SelectItem value="obras-arte">Obras de arte</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </AccordionContent>
-        </AccordionItem>
+        <Step value="condicoes" n={1} title="Condições">
+          <Field label="Data">
+            <Input type="date" value={hoje} readOnly className="h-12" />
+          </Field>
+          <Field label="Clima">
+            <Dropdown
+              placeholder="Selecione"
+              options={[
+                ["ensolarado", "Ensolarado"],
+                ["nublado", "Nublado"],
+                ["chuva-fraca", "Chuva fraca"],
+                ["chuva-forte", "Chuva forte"],
+              ]}
+            />
+          </Field>
+          <Field label="Frente de Serviço">
+            <Dropdown
+              placeholder="Selecione"
+              options={[
+                ["terraplenagem", "Terraplenagem"],
+                ["drenagem", "Drenagem"],
+                ["pavimentacao", "Pavimentação"],
+                ["obras-arte", "Obras de arte"],
+              ]}
+            />
+          </Field>
+        </Step>
 
-        <AccordionItem
-          value="localizacao"
-          className="rounded-2xl border-2 border-border bg-card px-4"
-        >
-          <AccordionTrigger className="text-base font-bold hover:no-underline">
-            <span className="flex items-center gap-3">
-              <Badge n={2} /> Localização
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
-            <Field label="Estaca Inicial">
-              <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-            </Field>
-            <Field label="Estaca Final">
-              <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-            </Field>
-          </AccordionContent>
-        </AccordionItem>
+        <Step value="localizacao" n={2} title="Localização">
+          <Field label="Estaca Inicial">
+            <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+          </Field>
+          <Field label="Estaca Final">
+            <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+          </Field>
+        </Step>
 
-        <AccordionItem
-          value="equipamentos"
-          className="rounded-2xl border-2 border-border bg-card px-4"
-        >
-          <AccordionTrigger className="text-base font-bold hover:no-underline">
-            <span className="flex items-center gap-3">
-              <Badge n={3} /> Equipamentos
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
-            {equipamentos.map((eq, idx) => (
-              <div
-                key={eq.id}
-                className="space-y-3 rounded-xl border border-border bg-background p-3"
+        <Step value="mao-obra" n={3} title="Mão de Obra">
+          <SubSection title="Direta (Produção)">
+            {direta.map((r, idx) => (
+              <RowCard
+                key={r.id}
+                label={`Direta ${idx + 1}`}
+                onRemove={
+                  direta.length > 1
+                    ? () => setDireta((p) => remove(p, r.id))
+                    : undefined
+                }
               >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-bold text-muted-foreground">
-                    Equipamento {idx + 1}
-                  </p>
-                  {equipamentos.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeEquip(eq.id)}
-                      className="grid h-9 w-9 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
-                      aria-label="Remover equipamento"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-                <Field label="Equipamento">
-                  <Select>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Selecione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="escavadeira">Escavadeira</SelectItem>
-                      <SelectItem value="motoniveladora">Motoniveladora</SelectItem>
-                      <SelectItem value="rolo">Rolo Compactador</SelectItem>
-                      <SelectItem value="caminhao">Caminhão Basculante</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <Field label="Função">
+                  <Dropdown
+                    placeholder="Selecione"
+                    options={[
+                      ["operador", "Operador"],
+                      ["servente", "Servente"],
+                      ["pedreiro", "Pedreiro"],
+                      ["carpinteiro", "Carpinteiro"],
+                      ["armador", "Armador"],
+                    ]}
+                  />
                 </Field>
-                <Field label="Horímetro Inicial">
+                <Field label="Quantidade de Pessoas">
+                  <Input type="number" inputMode="numeric" placeholder="0" className="h-12" />
+                </Field>
+                <Field label="Horas Normais">
                   <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
                 </Field>
-                <Field label="Horímetro Final">
+                <Field label="Horas Extras">
                   <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
                 </Field>
-                <Field label="Diesel (L)">
-                  <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-                </Field>
-              </div>
+              </RowCard>
             ))}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addEquip}
-              className="h-12 w-full border-2 border-dashed border-primary text-primary hover:bg-primary/10"
-            >
-              <Plus className="mr-2 h-4 w-4" /> Adicionar mais um equipamento
-            </Button>
-          </AccordionContent>
-        </AccordionItem>
+            <AddButton onClick={() => setDireta((p) => [...p, emptyDireta()])}>
+              Adicionar mais MO Direta
+            </AddButton>
+          </SubSection>
 
-        <AccordionItem
-          value="producao"
-          className="rounded-2xl border-2 border-border bg-card px-4"
-        >
-          <AccordionTrigger className="text-base font-bold hover:no-underline">
-            <span className="flex items-center gap-3">
-              <Badge n={4} /> Produção
-            </span>
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
-            <Field label="Serviço Executado">
-              <Select>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="corte">Corte</SelectItem>
-                  <SelectItem value="aterro">Aterro</SelectItem>
-                  <SelectItem value="bota-fora">Bota-fora</SelectItem>
-                  <SelectItem value="compactacao">Compactação</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Quantidade">
-              <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-            </Field>
-            <Field label="Unidade">
-              <Select>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="m3">m³</SelectItem>
-                  <SelectItem value="m2">m²</SelectItem>
-                  <SelectItem value="m">m</SelectItem>
-                  <SelectItem value="t">t</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-          </AccordionContent>
-        </AccordionItem>
+          <div className="my-4 h-px bg-border" />
+
+          <SubSection title="Indireta (Apoio)">
+            {indireta.map((r, idx) => (
+              <RowCard
+                key={r.id}
+                label={`Indireta ${idx + 1}`}
+                onRemove={
+                  indireta.length > 1
+                    ? () => setIndireta((p) => remove(p, r.id))
+                    : undefined
+                }
+              >
+                <Field label="Função">
+                  <Dropdown
+                    placeholder="Selecione"
+                    options={[
+                      ["encarregado", "Encarregado"],
+                      ["mestre-obras", "Mestre de obras"],
+                      ["apontador", "Apontador"],
+                      ["almoxarife", "Almoxarife"],
+                      ["tec-seguranca", "Téc. Segurança"],
+                    ]}
+                  />
+                </Field>
+                <Field label="Quantidade de Pessoas">
+                  <Input type="number" inputMode="numeric" placeholder="0" className="h-12" />
+                </Field>
+                <Field label="Horas Normais">
+                  <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+                </Field>
+              </RowCard>
+            ))}
+            <AddButton onClick={() => setIndireta((p) => [...p, emptyIndireta()])}>
+              Adicionar mais MO Indireta
+            </AddButton>
+          </SubSection>
+        </Step>
+
+        <Step value="equipamentos" n={4} title="Equipamentos">
+          {equipamentos.map((eq, idx) => (
+            <RowCard
+              key={eq.id}
+              label={`Equipamento ${idx + 1}`}
+              onRemove={
+                equipamentos.length > 1
+                  ? () => setEquipamentos((p) => remove(p, eq.id))
+                  : undefined
+              }
+            >
+              <Field label="Equipamento">
+                <Dropdown
+                  placeholder="Selecione"
+                  options={[
+                    ["escavadeira", "Escavadeira"],
+                    ["motoniveladora", "Motoniveladora"],
+                    ["rolo", "Rolo Compactador"],
+                    ["caminhao", "Caminhão Basculante"],
+                  ]}
+                />
+              </Field>
+              <Field label="Horímetro Inicial">
+                <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+              </Field>
+              <Field label="Horímetro Final">
+                <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+              </Field>
+              <Field label="Diesel (L)">
+                <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+              </Field>
+            </RowCard>
+          ))}
+          <AddButton onClick={() => setEquipamentos((p) => [...p, emptyEquip()])}>
+            Adicionar mais um equipamento
+          </AddButton>
+        </Step>
+
+        <Step value="producao" n={5} title="Produção">
+          <Field label="Serviço Executado">
+            <Dropdown
+              placeholder="Selecione"
+              options={[
+                ["corte", "Corte"],
+                ["aterro", "Aterro"],
+                ["bota-fora", "Bota-fora"],
+                ["compactacao", "Compactação"],
+              ]}
+            />
+          </Field>
+          <Field label="Quantidade">
+            <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+          </Field>
+          <Field label="Unidade">
+            <Dropdown
+              placeholder="Selecione"
+              options={[
+                ["m3", "m³"],
+                ["m2", "m²"],
+                ["m", "m"],
+                ["t", "t"],
+              ]}
+            />
+          </Field>
+        </Step>
       </Accordion>
 
-      <Button
-        type="submit"
-        className="h-14 w-full text-base font-bold shadow-md"
-      >
+      <Button type="submit" className="h-14 w-full text-base font-bold shadow-md">
         Salvar Apontamento
       </Button>
     </form>
+  );
+}
+
+function Step({
+  value,
+  n,
+  title,
+  children,
+}: {
+  value: string;
+  n: number;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <AccordionItem
+      value={value}
+      className="rounded-2xl border-2 border-border bg-card px-4"
+    >
+      <AccordionTrigger className="text-base font-bold hover:no-underline">
+        <span className="flex items-center gap-3">
+          <Badge n={n} /> {title}
+        </span>
+      </AccordionTrigger>
+      <AccordionContent className="space-y-4 pt-2">{children}</AccordionContent>
+    </AccordionItem>
+  );
+}
+
+function SubSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-black uppercase tracking-wider text-primary">
+        {title}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+function RowCard({
+  label,
+  onRemove,
+  children,
+}: {
+  label: string;
+  onRemove?: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3 rounded-xl border border-border bg-background p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-muted-foreground">{label}</p>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="grid h-9 w-9 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+            aria-label="Remover"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AddButton({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      onClick={onClick}
+      className="h-12 w-full border-2 border-dashed border-primary text-primary hover:bg-primary/10"
+    >
+      <Plus className="mr-2 h-4 w-4" /> {children}
+    </Button>
+  );
+}
+
+function Dropdown({
+  placeholder,
+  options,
+}: {
+  placeholder: string;
+  options: ReadonlyArray<readonly [string, string]>;
+}) {
+  return (
+    <Select>
+      <SelectTrigger className="h-12">
+        <SelectValue placeholder={placeholder} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map(([v, l]) => (
+          <SelectItem key={v} value={v}>
+            {l}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 

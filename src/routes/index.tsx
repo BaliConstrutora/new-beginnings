@@ -1,84 +1,88 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ClipboardList, Truck, Settings, HardHat } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { HardHat } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { OBRAS, getObra, setObra } from "@/lib/obra-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Início — Gestão de Obras" },
-      { name: "description", content: "Painel inicial do app de Gestão de Obras de Infraestrutura." },
+      { title: "Bora Bora — Gestão de Custos e Apropriação" },
+      {
+        name: "description",
+        content:
+          "Selecione a obra atual e acesse o sistema Bora Bora de Gestão de Custos e Apropriação de Obras de Infraestrutura.",
+      },
     ],
   }),
-  component: Dashboard,
+  component: EntryScreen,
 });
 
-const shortcuts = [
-  {
-    to: "/apontamento" as const,
-    title: "Apontamento Diário",
-    desc: "Registre clima, equipamentos e produção do dia.",
-    icon: ClipboardList,
-  },
-  {
-    to: "/checklist" as const,
-    title: "Checklist de Frota",
-    desc: "Inspeção pré-operacional dos equipamentos.",
-    icon: Truck,
-  },
-  {
-    to: "/configuracoes" as const,
-    title: "Configurações",
-    desc: "Preferências e dados da obra.",
-    icon: Settings,
-  },
-];
+function EntryScreen() {
+  const navigate = useNavigate();
+  const [value, setValue] = useState<string>("");
 
-function Dashboard() {
-  const today = new Date().toLocaleDateString("pt-BR", {
-    weekday: "long",
-    day: "2-digit",
-    month: "long",
-  });
+  useEffect(() => {
+    const current = getObra();
+    if (current) setValue(current);
+  }, []);
+
+  const handleEnter = () => {
+    if (!value) return;
+    setObra(value);
+    navigate({ to: "/dashboard" });
+  };
 
   return (
-    <div className="space-y-6">
-      <header className="rounded-2xl bg-sidebar text-sidebar-foreground p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <HardHat className="h-6 w-6" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs uppercase tracking-wider text-sidebar-foreground/70">
-              Bem-vindo
-            </p>
-            <h1 className="truncate text-xl font-bold">Equipe de Campo</h1>
-          </div>
+    <div className="flex min-h-[calc(100vh-3rem)] flex-col justify-between gap-8">
+      <div className="flex flex-col items-center pt-10 text-center">
+        <div className="grid h-20 w-20 place-items-center rounded-3xl bg-primary text-primary-foreground shadow-lg">
+          <HardHat className="h-10 w-10" />
         </div>
-        <p className="mt-3 text-sm capitalize text-sidebar-foreground/80">{today}</p>
-      </header>
+        <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground">
+          Bora Bora
+        </h1>
+        <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          Gestão de Custos e Apropriação
+        </p>
+      </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-          Atalhos rápidos
-        </h2>
-        <ul className="space-y-3">
-          {shortcuts.map(({ to, title, desc, icon: Icon }) => (
-            <li key={to}>
-              <Link
-                to={to}
-                className="flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 transition-colors hover:border-primary active:bg-accent"
-              >
-                <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                  <Icon className="h-7 w-7" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-foreground">{title}</p>
-                  <p className="text-sm text-muted-foreground">{desc}</p>
-                </div>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-5 shadow-sm">
+        <Label htmlFor="obra" className="text-sm font-bold uppercase tracking-wider">
+          Obra Atual
+        </Label>
+        <Select value={value} onValueChange={setValue}>
+          <SelectTrigger id="obra" className="h-14 text-base">
+            <SelectValue placeholder="Selecione a obra" />
+          </SelectTrigger>
+          <SelectContent>
+            {OBRAS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-base">
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          onClick={handleEnter}
+          disabled={!value}
+          className="mt-2 h-14 w-full text-base font-bold shadow-md"
+        >
+          Entrar
+        </Button>
+      </div>
+
+      <p className="text-center text-xs text-muted-foreground">
+        © {new Date().getFullYear()} Bora Bora · Uso em campo
+      </p>
     </div>
   );
 }

@@ -1,19 +1,18 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, ClipboardList, Truck, Settings } from "lucide-react";
+import { LayoutDashboard, ClipboardList } from "lucide-react";
 
 const items = [
-  { to: "/", label: "Início", icon: Home },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/apontamento", label: "Apontamento", icon: ClipboardList },
-  { to: "/checklist", label: "Checklist", icon: Truck },
-  { to: "/configuracoes", label: "Config", icon: Settings },
 ] as const;
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (pathname === "/") return null;
 
   return (
     <nav className="fixed bottom-0 inset-x-0 z-50 border-t-2 border-border bg-card pb-[env(safe-area-inset-bottom)]">
-      <ul className="grid grid-cols-4">
+      <ul className="mx-auto grid max-w-screen-sm grid-cols-2">
         {items.map(({ to, label, icon: Icon }) => {
           const active = pathname === to;
           return (
