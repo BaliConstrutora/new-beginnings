@@ -1,4 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { HardHat, ChevronDown } from "lucide-react";
 import { useObra, obraLabel, clearObra } from "@/lib/obra-store";
 
@@ -6,6 +7,8 @@ export function AppHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const obra = useObra();
   const navigate = useNavigate();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   if (pathname === "/") return null;
 
@@ -34,7 +37,9 @@ export function AppHeader() {
           className="flex max-w-[45%] items-center gap-1.5 rounded-lg border border-sidebar-foreground/20 bg-sidebar-foreground/5 px-2.5 py-1.5 text-xs font-bold transition-colors hover:bg-sidebar-foreground/10"
           aria-label="Trocar obra"
         >
-          <span className="truncate">{obraLabel(obra) || "Selecionar obra"}</span>
+          <span className="truncate" suppressHydrationWarning>
+            {mounted ? obraLabel(obra) || "Selecionar obra" : "Selecionar obra"}
+          </span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0" />
         </button>
       </div>
