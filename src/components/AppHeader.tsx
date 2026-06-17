@@ -30,7 +30,7 @@ export function AppHeader() {
         </Link>
         <button
           type="button"
-          onClick={clearObra}
+          onClick={handleSwitch}
           className="flex max-w-[45%] items-center gap-1.5 rounded-lg border border-sidebar-foreground/20 bg-sidebar-foreground/5 px-2.5 py-1.5 text-xs font-bold transition-colors hover:bg-sidebar-foreground/10"
           aria-label="Trocar obra"
         >
