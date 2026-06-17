@@ -5,8 +5,14 @@ import { useObra, obraLabel, clearObra } from "@/lib/obra-store";
 export function AppHeader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const obra = useObra();
+  const navigate = useNavigate();
 
   if (pathname === "/") return null;
+
+  const handleSwitch = () => {
+    clearObra();
+    navigate({ to: "/" });
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b-2 border-border bg-sidebar text-sidebar-foreground">
