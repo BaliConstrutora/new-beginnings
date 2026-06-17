@@ -122,6 +122,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background">
+        <AppHeader />
         <main className="mx-auto max-w-screen-sm px-4 pt-5 pb-28">
           <Outlet />
         </main>
