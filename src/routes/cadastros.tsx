@@ -45,9 +45,10 @@ export const Route = createFileRoute("/cadastros")({
 function CadastrosPage() {
   const navigate = useNavigate();
   const obra = useObra();
+  const hydrated = useHydrated();
   useEffect(() => {
-    if (typeof window !== "undefined" && !obra) navigate({ to: "/" });
-  }, [obra, navigate]);
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
 
   return (
     <div className="space-y-5 pb-4">
