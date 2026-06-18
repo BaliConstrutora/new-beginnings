@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 const EQUIP_KEY = "borabora.cadastros.equipamentos";
 const MO_KEY = "borabora.cadastros.maoobra";
+const FRENTE_KEY = "borabora.cadastros.frentes";
 const EVENT = "borabora:cadastros";
 
 export type EquipamentoCadastro = {
