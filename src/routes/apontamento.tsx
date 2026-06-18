@@ -86,13 +86,14 @@ function Apontamento() {
   const hoje = new Date().toISOString().slice(0, 10);
   const navigate = useNavigate();
   const obra = useObra();
+  const hydrated = useHydrated();
   const equipamentosCad = useEquipamentos();
   const maoObraCad = useMaoObra();
   const plano = usePlanejamento(hoje);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !obra) navigate({ to: "/" });
-  }, [obra, navigate]);
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
 
   const equipMap = useMemo(
     () => new Map(equipamentosCad.map((e) => [e.id, e])),
