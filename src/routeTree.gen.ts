@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as PlanejamentoRouteImport } from './routes/planejamento'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CadastrosRouteImport } from './routes/cadastros'
 import { Route as ApontamentoRouteImport } from './routes/apontamento'
@@ -18,6 +19,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlanejamentoRoute = PlanejamentoRouteImport.update({
+  id: '/planejamento',
+  path: '/planejamento',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/apontamento': typeof ApontamentoRoute
   '/cadastros': typeof CadastrosRoute
   '/dashboard': typeof DashboardRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/apontamento': typeof ApontamentoRoute
   '/cadastros': typeof CadastrosRoute
   '/dashboard': typeof DashboardRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRoutesById {
@@ -61,19 +69,21 @@ export interface FileRoutesById {
   '/apontamento': typeof ApontamentoRoute
   '/cadastros': typeof CadastrosRoute
   '/dashboard': typeof DashboardRoute
+  '/planejamento': typeof PlanejamentoRoute
   '/relatorios': typeof RelatoriosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/apontamento' | '/cadastros' | '/dashboard' | '/relatorios'
+  fullPaths: '/' | '/apontamento' | '/cadastros' | '/dashboard' | '/planejamento' | '/relatorios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/apontamento' | '/cadastros' | '/dashboard' | '/relatorios'
+  to: '/' | '/apontamento' | '/cadastros' | '/dashboard' | '/planejamento' | '/relatorios'
   id:
     | '__root__'
     | '/'
     | '/apontamento'
     | '/cadastros'
     | '/dashboard'
+    | '/planejamento'
     | '/relatorios'
   fileRoutesById: FileRoutesById
 }
@@ -82,6 +92,7 @@ export interface RootRouteChildren {
   ApontamentoRoute: typeof ApontamentoRoute
   CadastrosRoute: typeof CadastrosRoute
   DashboardRoute: typeof DashboardRoute
+  PlanejamentoRoute: typeof PlanejamentoRoute
   RelatoriosRoute: typeof RelatoriosRoute
 }
 
@@ -92,6 +103,13 @@ declare module '@tanstack/react-router' {
       path: '/relatorios'
       fullPath: '/relatorios'
       preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/planejamento': {
+      id: '/planejamento'
+      path: '/planejamento'
+      fullPath: '/planejamento'
+      preLoaderRoute: typeof PlanejamentoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -130,8 +148,19 @@ const rootRouteChildren: RootRouteChildren = {
   ApontamentoRoute: ApontamentoRoute,
   CadastrosRoute: CadastrosRoute,
   DashboardRoute: DashboardRoute,
+  PlanejamentoRoute: PlanejamentoRoute,
   RelatoriosRoute: RelatoriosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
