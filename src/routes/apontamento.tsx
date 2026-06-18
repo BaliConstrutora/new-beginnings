@@ -89,7 +89,12 @@ function Apontamento() {
   const hydrated = useHydrated();
   const equipamentosCad = useEquipamentos();
   const maoObraCad = useMaoObra();
+  const frentesCad = useFrentes();
   const plano = usePlanejamento(hoje);
+  const frenteNome = useMemo(
+    () => frentesCad.find((f) => f.id === plano?.frente)?.nome ?? plano?.frente ?? "",
+    [frentesCad, plano],
+  );
 
   useEffect(() => {
     if (hydrated && !obra) navigate({ to: "/" });
