@@ -8,13 +8,15 @@ import {
 } from "lucide-react";
 import { useRole } from "@/lib/auth-store";
 
-const ALL = [
+import type { Role } from "@/lib/auth-store";
+
+const ALL: { to: string; label: string; icon: typeof LayoutDashboard; roles: Role[] }[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["sede", "campo"] },
   { to: "/planejamento", label: "Planejar", icon: CalendarRange, roles: ["sede", "campo"] },
   { to: "/apontamento", label: "Apontar", icon: ClipboardList, roles: ["sede", "campo"] },
   { to: "/cadastros", label: "Cadastros", icon: Database, roles: ["sede"] },
   { to: "/relatorios", label: "Relatórios", icon: FileBarChart2, roles: ["sede"] },
-] as const;
+];
 
 export function BottomNav() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
