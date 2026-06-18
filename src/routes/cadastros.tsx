@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Wrench, Users, Settings2 } from "lucide-react";
+import { Trash2, Wrench, Users, Settings2, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,10 +16,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   addEquipamento,
   addMaoObra,
+  addFrente,
   removeEquipamento,
   removeMaoObra,
+  removeFrente,
   useEquipamentos,
   useMaoObra,
+  useFrentes,
 } from "@/lib/cadastros-store";
 import { useObra, useHydrated } from "@/lib/obra-store";
 import {
