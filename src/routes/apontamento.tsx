@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useObra, useHydrated } from "@/lib/obra-store";
-import { useEquipamentos, useMaoObra } from "@/lib/cadastros-store";
+import { useEquipamentos, useMaoObra, useFrentes } from "@/lib/cadastros-store";
 import { usePlanejamento, uid } from "@/lib/planejamento-store";
 import {
   saveApontamento,
