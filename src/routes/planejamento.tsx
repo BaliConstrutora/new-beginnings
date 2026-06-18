@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Database, Lock } from "lucide-react";
+import { Plus, Trash2, Database, Lock, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useObra } from "@/lib/obra-store";
+import { useObra, useHydrated } from "@/lib/obra-store";
 import { useRole } from "@/lib/auth-store";
 import { useParametros } from "@/lib/parametros-store";
-import { useEquipamentos, useMaoObra } from "@/lib/cadastros-store";
+import { useEquipamentos, useMaoObra, useFrentes } from "@/lib/cadastros-store";
 import {
   getPlanejamento,
   savePlanejamento,
@@ -28,37 +28,23 @@ import {
 export const Route = createFileRoute("/planejamento")({
   head: () => ({
     meta: [
-      { title: "Planejamento Diário — Bora Bora" },
+      { title: "Planejamento — Bora Bora" },
       {
         name: "description",
-        content: "Planeje serviços, equipes e equipamentos para a frente de trabalho do dia seguinte.",
+        content:
+          "Planeje serviços, equipes e equipamentos para a frente de trabalho.",
       },
     ],
   }),
   component: PlanejamentoPage,
 });
 
-const SERVICOS = [
-  ["corte", "Corte"],
-  ["aterro", "Aterro"],
-  ["bota-fora", "Bota-fora"],
-  ["compactacao", "Compactação"],
-  ["base-brita", "Base de Brita"],
-  ["drenagem", "Drenagem"],
-] as const;
-
-const UNIDADES = [
-  ["m3", "m³"],
-  ["m2", "m²"],
-  ["m", "m"],
-  ["t", "t"],
-] as const;
-
-const FRENTES = [
-  ["terraplenagem", "Terraplenagem"],
-  ["drenagem", "Drenagem"],
-  ["pavimentacao", "Pavimentação"],
-  ["obras-arte", "Obras de arte"],
+const PISTAS = [
+  ["norte", "Norte"],
+  ["sul", "Sul"],
+  ["leste", "Leste"],
+  ["oeste", "Oeste"],
+  ["simples", "Simples"],
 ] as const;
 
 function amanha() {
@@ -67,28 +53,56 @@ function amanha() {
   return d.toISOString().slice(0, 10);
 }
 
+function num(v: string) {
+  const n = parseFloat(v);
+  return isNaN(n) ? 0 : n;
+}
+function fmt(n: number) {
+  if (!isFinite(n) || n === 0) return "";
+  return n.toFixed(3).replace(/\.?0+$/, "");
+}
+
+function novoServico(data: string): ServicoPlanejado {
+  return {
+    id: uid(),
+    data,
+    kmInicial: "",
+    kmFinal: "",
+    faixa: "",
+    pista: "",
+    comprimento: "",
+    largura: "",
+    espessura: "",
+    densidade: "",
+    servico: "",
+    metaQuantidade: "",
+    unidade: "m³",
+  };
+}
+
 function PlanejamentoPage() {
   const navigate = useNavigate();
   const obra = useObra();
+  const hydrated = useHydrated();
   const role = useRole();
   const parametros = useParametros();
   const equipamentosCad = useEquipamentos();
   const maoObraCad = useMaoObra();
+  const frentesCad = useFrentes();
 
   const [data, setData] = useState(amanha());
   const [frente, setFrente] = useState("");
   const [servicos, setServicos] = useState<ServicoPlanejado[]>([]);
   const [equipe, setEquipe] = useState<EquipePrevista[]>([]);
   const [equipamentos, setEquipamentos] = useState<EquipamentoPrevisto[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const readOnly =
-    role === "campo" && parametros.modelo === "centralizado";
+  const readOnly = role === "campo" && parametros.modelo === "centralizado";
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !obra) navigate({ to: "/" });
-  }, [obra, navigate]);
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
 
-  // load plan when date changes
   useEffect(() => {
     const p = getPlanejamento(data);
     if (p) {
@@ -115,6 +129,10 @@ function PlanejamentoPage() {
       ),
     [equipamentosCad],
   );
+  const frenteOptions = useMemo(
+    () => frentesCad.map((f) => [f.id, f.nome] as [string, string]),
+    [frentesCad],
+  );
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,16 +144,38 @@ function PlanejamentoPage() {
       toast.error("Adicione ao menos um serviço planejado.");
       return;
     }
-    savePlanejamento({ data, frente, servicos, equipe, equipamentos });
+    // sincroniza meta = volume calculado
+    const finalServicos = servicos.map((s) => {
+      const area = num(s.comprimento) * num(s.largura);
+      const volume = area * num(s.espessura);
+      return { ...s, metaQuantidade: fmt(volume), unidade: "m³" };
+    });
+    savePlanejamento({ data, frente, servicos: finalServicos, equipe, equipamentos });
     toast.success("Planejamento salvo!", {
       description: `Plano para ${data} registrado.`,
     });
   };
 
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Mock: gera 3 serviços fictícios independente do conteúdo
+    const mock: ServicoPlanejado[] = [
+      mockServico(data, "0+000", "0+250", "1", "norte", "250", "3.5", "0.05", "2.4"),
+      mockServico(data, "0+250", "0+500", "2", "sul", "250", "3.5", "0.05", "2.4"),
+      mockServico(data, "0+500", "0+800", "1", "simples", "300", "7.0", "0.07", "2.4"),
+    ];
+    setServicos((prev) => [...prev, ...mock]);
+    toast.success("Planejamento importado com sucesso!", {
+      description: `${mock.length} serviços importados de ${file.name}.`,
+    });
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   return (
     <form onSubmit={handleSave} className="space-y-5 pb-4">
       <header>
-        <h1 className="text-2xl font-bold">Planejamento Diário</h1>
+        <h1 className="text-2xl font-bold">Planejamento</h1>
         <p className="text-sm text-muted-foreground">
           Defina serviços, equipes e equipamentos previstos.
         </p>
@@ -161,106 +201,60 @@ function PlanejamentoPage() {
           />
         </Field>
         <Field label="Frente de Serviço">
-          <Select value={frente} onValueChange={setFrente} disabled={readOnly}>
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              {FRENTES.map(([v, l]) => (
-                <SelectItem key={v} value={v}>
-                  {l}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {frenteOptions.length === 0 ? (
+            <EmptyCadastro tipo="frentes de serviço" />
+          ) : (
+            <Dropdown
+              value={frente}
+              onChange={setFrente}
+              placeholder="Selecione"
+              options={frenteOptions}
+              disabled={readOnly}
+            />
+          )}
         </Field>
       </section>
 
       <Section title="Serviços Planejados (EAP)">
+        {!readOnly && (
+          <>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              onChange={handleImport}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="h-12 w-full bg-emerald-600 font-bold text-white hover:bg-emerald-700"
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              Importar Planilha (Excel/CSV)
+            </Button>
+          </>
+        )}
         {servicos.map((s, idx) => (
-          <RowCard
+          <ServicoCard
             key={s.id}
-            label={`Serviço ${idx + 1}`}
+            servico={s}
+            idx={idx}
+            disabled={readOnly}
+            onChange={(patch) =>
+              setServicos((p) =>
+                p.map((x) => (x.id === s.id ? { ...x, ...patch } : x)),
+              )
+            }
             onRemove={
               !readOnly
                 ? () => setServicos((p) => p.filter((x) => x.id !== s.id))
                 : undefined
             }
-          >
-            <Field label="Serviço">
-              <Select
-                value={s.servico}
-                onValueChange={(v) =>
-                  setServicos((p) =>
-                    p.map((x) => (x.id === s.id ? { ...x, servico: v } : x)),
-                  )
-                }
-                disabled={readOnly}
-              >
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SERVICOS.map(([v, l]) => (
-                    <SelectItem key={v} value={v}>
-                      {l}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Meta (Quantidade)">
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  value={s.metaQuantidade}
-                  onChange={(e) =>
-                    setServicos((p) =>
-                      p.map((x) =>
-                        x.id === s.id ? { ...x, metaQuantidade: e.target.value } : x,
-                      ),
-                    )
-                  }
-                  placeholder="0"
-                  className="h-12"
-                  disabled={readOnly}
-                />
-              </Field>
-              <Field label="Unidade">
-                <Select
-                  value={s.unidade}
-                  onValueChange={(v) =>
-                    setServicos((p) =>
-                      p.map((x) => (x.id === s.id ? { ...x, unidade: v } : x)),
-                    )
-                  }
-                  disabled={readOnly}
-                >
-                  <SelectTrigger className="h-12">
-                    <SelectValue placeholder="Un." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {UNIDADES.map(([v, l]) => (
-                      <SelectItem key={v} value={v}>
-                        {l}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-          </RowCard>
+          />
         ))}
         {!readOnly && (
-          <AddButton
-            onClick={() =>
-              setServicos((p) => [
-                ...p,
-                { id: uid(), servico: "", metaQuantidade: "", unidade: "" },
-              ])
-            }
-          >
+          <AddButton onClick={() => setServicos((p) => [...p, novoServico(data)])}>
             Adicionar Serviço Planejado
           </AddButton>
         )}
@@ -313,10 +307,7 @@ function PlanejamentoPage() {
         {!readOnly && funcoesOptions.length > 0 && (
           <AddButton
             onClick={() =>
-              setEquipe((p) => [
-                ...p,
-                { id: uid(), funcaoId: "", qtdPrevista: "" },
-              ])
+              setEquipe((p) => [...p, { id: uid(), funcaoId: "", qtdPrevista: "" }])
             }
           >
             Alocar Função
@@ -356,10 +347,7 @@ function PlanejamentoPage() {
         {!readOnly && equipOptions.length > 0 && (
           <AddButton
             onClick={() =>
-              setEquipamentos((p) => [
-                ...p,
-                { id: uid(), equipamentoId: "" },
-              ])
+              setEquipamentos((p) => [...p, { id: uid(), equipamentoId: "" }])
             }
           >
             Alocar Equipamento
@@ -379,13 +367,213 @@ function PlanejamentoPage() {
   );
 }
 
-function Section({
-  title,
-  children,
+function mockServico(
+  data: string,
+  ki: string,
+  kf: string,
+  faixa: string,
+  pista: string,
+  c: string,
+  l: string,
+  e: string,
+  d: string,
+): ServicoPlanejado {
+  const area = num(c) * num(l);
+  const volume = area * num(e);
+  return {
+    id: uid(),
+    data,
+    kmInicial: ki,
+    kmFinal: kf,
+    faixa,
+    pista,
+    comprimento: c,
+    largura: l,
+    espessura: e,
+    densidade: d,
+    servico: "",
+    metaQuantidade: fmt(volume),
+    unidade: "m³",
+  };
+}
+
+function ServicoCard({
+  servico,
+  idx,
+  disabled,
+  onChange,
+  onRemove,
 }: {
-  title: string;
-  children: React.ReactNode;
+  servico: ServicoPlanejado;
+  idx: number;
+  disabled?: boolean;
+  onChange: (patch: Partial<ServicoPlanejado>) => void;
+  onRemove?: () => void;
 }) {
+  const area = num(servico.comprimento) * num(servico.largura);
+  const volume = area * num(servico.espessura);
+  const peso = volume * num(servico.densidade);
+
+  return (
+    <div className="space-y-3 rounded-xl border-2 border-primary/40 bg-primary/5 p-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-bold text-foreground">Serviço {idx + 1}</p>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="grid h-9 w-9 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+            aria-label="Remover"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      <Field label="Data">
+        <Input
+          type="date"
+          value={servico.data}
+          onChange={(e) => onChange({ data: e.target.value })}
+          className="h-12"
+          disabled={disabled}
+        />
+      </Field>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Km Inicial">
+          <Input
+            value={servico.kmInicial}
+            onChange={(e) => onChange({ kmInicial: e.target.value })}
+            placeholder="0+000"
+            className="h-12"
+            disabled={disabled}
+          />
+        </Field>
+        <Field label="Km Final">
+          <Input
+            value={servico.kmFinal}
+            onChange={(e) => onChange({ kmFinal: e.target.value })}
+            placeholder="0+250"
+            className="h-12"
+            disabled={disabled}
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Faixa">
+          <Input
+            type="number"
+            inputMode="numeric"
+            value={servico.faixa}
+            onChange={(e) => onChange({ faixa: e.target.value })}
+            placeholder="1"
+            className="h-12"
+            disabled={disabled}
+          />
+        </Field>
+        <Field label="Pista">
+          <Select
+            value={servico.pista}
+            onValueChange={(v) => onChange({ pista: v })}
+            disabled={disabled}
+          >
+            <SelectTrigger className="h-12">
+              <SelectValue placeholder="Selecione" />
+            </SelectTrigger>
+            <SelectContent>
+              {PISTAS.map(([v, l]) => (
+                <SelectItem key={v} value={v}>
+                  {l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <Field label="Compr. (m)">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={servico.comprimento}
+            onChange={(e) => onChange({ comprimento: e.target.value })}
+            placeholder="0"
+            className="h-12"
+            disabled={disabled}
+          />
+        </Field>
+        <Field label="Largura (m)">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={servico.largura}
+            onChange={(e) => onChange({ largura: e.target.value })}
+            placeholder="0"
+            className="h-12"
+            disabled={disabled}
+          />
+        </Field>
+        <Field label="Espess. (m)">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={servico.espessura}
+            onChange={(e) => onChange({ espessura: e.target.value })}
+            placeholder="0"
+            className="h-12"
+            disabled={disabled}
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Área (m²)">
+          <Input
+            value={fmt(area)}
+            readOnly
+            className="h-12 bg-muted font-bold"
+            placeholder="—"
+          />
+        </Field>
+        <Field label="Volume (m³)">
+          <Input
+            value={fmt(volume)}
+            readOnly
+            className="h-12 bg-muted font-bold"
+            placeholder="—"
+          />
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Densidade (ton/m³)">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={servico.densidade}
+            onChange={(e) => onChange({ densidade: e.target.value })}
+            placeholder="2.4"
+            className="h-12"
+            disabled={disabled}
+          />
+        </Field>
+        <Field label="Peso (ton)">
+          <Input
+            value={fmt(peso)}
+            readOnly
+            className="h-12 bg-muted font-bold"
+            placeholder="—"
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
       <p className="text-xs font-black uppercase tracking-wider text-primary">
