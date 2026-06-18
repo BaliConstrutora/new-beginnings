@@ -29,14 +29,15 @@ export const Route = createFileRoute("/dashboard")({
 function Dashboard() {
   const navigate = useNavigate();
   const obra = useObra();
+  const hydrated = useHydrated();
   const role = useRole();
   const hoje = new Date().toISOString().slice(0, 10);
   const plano = usePlanejamento(hoje);
   const apont = useApontamento(hoje);
 
   useEffect(() => {
-    if (!obra) navigate({ to: "/" });
-  }, [obra, navigate]);
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
 
   const aderencia = useMemo(() => {
     if (!plano) return null;
