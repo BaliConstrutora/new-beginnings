@@ -186,7 +186,7 @@ function Apontamento() {
         <h1 className="text-2xl font-bold">Apontamento Diário</h1>
         <p className="text-sm text-muted-foreground">
           {plano
-            ? `Plano carregado · Frente: ${plano.frente || "—"}`
+            ? `Plano carregado · Frente: ${frenteNome || "—"}`
             : "Nenhum planejamento encontrado para hoje."}
         </p>
         {!plano && (
