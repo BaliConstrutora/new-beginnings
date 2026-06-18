@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 const EQUIP_KEY = "borabora.cadastros.equipamentos";
 const MO_KEY = "borabora.cadastros.maoobra";
+const FRENTE_KEY = "borabora.cadastros.frentes";
 const EVENT = "borabora:cadastros";
 
 export type EquipamentoCadastro = {
@@ -96,4 +97,31 @@ export function addMaoObra(funcao: string, categoria: "direta" | "indireta") {
 
 export function removeMaoObra(id: string) {
   write(MO_KEY, read<MaoObraCadastro>(MO_KEY).filter((m) => m.id !== id));
+}
+
+export type FrenteCadastro = { id: string; nome: string };
+
+export function useFrentes() {
+  const [list, setList] = useState<FrenteCadastro[]>([]);
+  useEffect(() => {
+    const sync = () => setList(read<FrenteCadastro>(FRENTE_KEY));
+    sync();
+    window.addEventListener(EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+  return list;
+}
+
+export function addFrente(nome: string) {
+  const list = read<FrenteCadastro>(FRENTE_KEY);
+  list.push({ id: uid(), nome });
+  write(FRENTE_KEY, list);
+}
+
+export function removeFrente(id: string) {
+  write(FRENTE_KEY, read<FrenteCadastro>(FRENTE_KEY).filter((f) => f.id !== id));
 }

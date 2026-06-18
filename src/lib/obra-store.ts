@@ -30,9 +30,10 @@ export function obraLabel(value: string | null): string {
 }
 
 export function useObra(): string | null {
-  const [obra, setState] = useState<string | null>(() => getObra());
+  const [obra, setState] = useState<string | null>(null);
   useEffect(() => {
     const update = () => setState(getObra());
+    update();
     window.addEventListener("borabora:obra", update);
     window.addEventListener("storage", update);
     return () => {
@@ -41,4 +42,11 @@ export function useObra(): string | null {
     };
   }, []);
   return obra;
+}
+
+/** True após hidratação do cliente. Use em guards para evitar redirect antes do mount. */
+export function useHydrated(): boolean {
+  const [h, setH] = useState(false);
+  useEffect(() => setH(true), []);
+  return h;
 }

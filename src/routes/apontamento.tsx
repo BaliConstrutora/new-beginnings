@@ -18,8 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useObra } from "@/lib/obra-store";
-import { useEquipamentos, useMaoObra } from "@/lib/cadastros-store";
+import { useObra, useHydrated } from "@/lib/obra-store";
+import { useEquipamentos, useMaoObra, useFrentes } from "@/lib/cadastros-store";
 import { usePlanejamento, uid } from "@/lib/planejamento-store";
 import {
   saveApontamento,
@@ -86,13 +86,19 @@ function Apontamento() {
   const hoje = new Date().toISOString().slice(0, 10);
   const navigate = useNavigate();
   const obra = useObra();
+  const hydrated = useHydrated();
   const equipamentosCad = useEquipamentos();
   const maoObraCad = useMaoObra();
+  const frentesCad = useFrentes();
   const plano = usePlanejamento(hoje);
+  const frenteNome = useMemo(
+    () => frentesCad.find((f) => f.id === plano?.frente)?.nome ?? plano?.frente ?? "",
+    [frentesCad, plano],
+  );
 
   useEffect(() => {
-    if (typeof window !== "undefined" && !obra) navigate({ to: "/" });
-  }, [obra, navigate]);
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
 
   const equipMap = useMemo(
     () => new Map(equipamentosCad.map((e) => [e.id, e])),
@@ -180,7 +186,7 @@ function Apontamento() {
         <h1 className="text-2xl font-bold">Apontamento Diário</h1>
         <p className="text-sm text-muted-foreground">
           {plano
-            ? `Plano carregado · Frente: ${plano.frente || "—"}`
+            ? `Plano carregado · Frente: ${frenteNome || "—"}`
             : "Nenhum planejamento encontrado para hoje."}
         </p>
         {!plano && (

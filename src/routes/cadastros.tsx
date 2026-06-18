@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Wrench, Users, Settings2 } from "lucide-react";
+import { Trash2, Wrench, Users, Settings2, Map } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,12 +16,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   addEquipamento,
   addMaoObra,
+  addFrente,
   removeEquipamento,
   removeMaoObra,
+  removeFrente,
   useEquipamentos,
   useMaoObra,
+  useFrentes,
 } from "@/lib/cadastros-store";
-import { useObra } from "@/lib/obra-store";
+import { useObra, useHydrated } from "@/lib/obra-store";
 import {
   getParametros,
   setParametros,
@@ -45,9 +48,10 @@ export const Route = createFileRoute("/cadastros")({
 function CadastrosPage() {
   const navigate = useNavigate();
   const obra = useObra();
+  const hydrated = useHydrated();
   useEffect(() => {
-    if (typeof window !== "undefined" && !obra) navigate({ to: "/" });
-  }, [obra, navigate]);
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
 
   return (
     <div className="space-y-5 pb-4">
@@ -59,15 +63,18 @@ function CadastrosPage() {
       </header>
 
       <Tabs defaultValue="equip" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 h-12">
-          <TabsTrigger value="equip" className="text-xs font-bold">
-            <Wrench className="mr-1.5 h-4 w-4" /> Equip.
+        <TabsList className="grid w-full grid-cols-4 h-12">
+          <TabsTrigger value="equip" className="text-[11px] font-bold">
+            <Wrench className="mr-1 h-4 w-4" /> Equip.
           </TabsTrigger>
-          <TabsTrigger value="mo" className="text-xs font-bold">
-            <Users className="mr-1.5 h-4 w-4" /> Mão Obra
+          <TabsTrigger value="mo" className="text-[11px] font-bold">
+            <Users className="mr-1 h-4 w-4" /> M.Obra
           </TabsTrigger>
-          <TabsTrigger value="param" className="text-xs font-bold">
-            <Settings2 className="mr-1.5 h-4 w-4" /> Parâmetros
+          <TabsTrigger value="frente" className="text-[11px] font-bold">
+            <Map className="mr-1 h-4 w-4" /> Frente
+          </TabsTrigger>
+          <TabsTrigger value="param" className="text-[11px] font-bold">
+            <Settings2 className="mr-1 h-4 w-4" /> Param.
           </TabsTrigger>
         </TabsList>
 
@@ -77,10 +84,65 @@ function CadastrosPage() {
         <TabsContent value="mo" className="mt-4">
           <MaoObraTab />
         </TabsContent>
+        <TabsContent value="frente" className="mt-4">
+          <FrentesTab />
+        </TabsContent>
         <TabsContent value="param" className="mt-4">
           <ParametrosTab />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function FrentesTab() {
+  const frentes = useFrentes();
+  const [nome, setNome] = useState("");
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim()) {
+      toast.error("Informe o nome da frente.");
+      return;
+    }
+    addFrente(nome.trim());
+    setNome("");
+    toast.success("Frente cadastrada!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <form
+        onSubmit={handleSave}
+        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
+      >
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Nome da Frente</Label>
+          <Input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Ex: Pavimentação, Fresagem, Drenagem"
+            className="h-12"
+          />
+        </div>
+        <Button type="submit" className="h-12 w-full font-bold">
+          Salvar Frente
+        </Button>
+      </form>
+
+      <ListSection title="Frentes Cadastradas" empty="Nenhuma frente cadastrada.">
+        {frentes.map((f) => (
+          <ListItem
+            key={f.id}
+            title={f.nome}
+            subtitle="Frente de Serviço"
+            onRemove={() => {
+              removeFrente(f.id);
+              toast.success("Frente removida.");
+            }}
+          />
+        ))}
+      </ListSection>
     </div>
   );
 }

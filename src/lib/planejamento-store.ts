@@ -5,9 +5,20 @@ const EVENT = "borabora:planejamento";
 
 export type ServicoPlanejado = {
   id: string;
+  data: string;
+  kmInicial: string;
+  kmFinal: string;
+  faixa: string;
+  pista: string;
+  comprimento: string;
+  largura: string;
+  espessura: string;
+  densidade: string;
+  // Derivados (calculados): area, volume, peso
+  // Campos legados mantidos p/ integração com apontamento:
   servico: string;
-  metaQuantidade: string;
-  unidade: string;
+  metaQuantidade: string; // = volume (m³)
+  unidade: string; // = "m³"
 };
 
 export type EquipePrevista = { id: string; funcaoId: string; qtdPrevista: string };
