@@ -30,9 +30,12 @@ export function obraLabel(value: string | null): string {
 }
 
 export function useObra(): string | null {
-  const [obra, setState] = useState<string | null>(() => getObra());
+  const [obra, setState] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     const update = () => setState(getObra());
+    update();
+    setReady(true);
     window.addEventListener("borabora:obra", update);
     window.addEventListener("storage", update);
     return () => {
@@ -40,5 +43,6 @@ export function useObra(): string | null {
       window.removeEventListener("storage", update);
     };
   }, []);
-  return obra;
+  // Sinaliza "ainda não hidratado" para que guards não redirecionem antes do mount
+  return ready ? obra : (typeof window !== "undefined" ? obra : null);
 }
