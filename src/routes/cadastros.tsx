@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Wrench, Users } from "lucide-react";
+import { Trash2, Wrench, Users, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DESCRICOES_EQUIPAMENTO,
   addEquipamento,
   addMaoObra,
   removeEquipamento,
@@ -23,15 +22,20 @@ import {
   useMaoObra,
 } from "@/lib/cadastros-store";
 import { useObra } from "@/lib/obra-store";
+import {
+  getParametros,
+  setParametros,
+  type ModeloPlanejamento,
+} from "@/lib/parametros-store";
 
 export const Route = createFileRoute("/cadastros")({
   head: () => ({
     meta: [
-      { title: "Cadastros da Obra — Bora Bora" },
+      { title: "Cadastros e Configurações da Obra — Bora Bora" },
       {
         name: "description",
         content:
-          "Cadastre equipamentos e funções de mão de obra mobilizados no canteiro.",
+          "Cadastre equipamentos, funções de mão de obra e configure parâmetros de planejamento da obra.",
       },
     ],
   }),
@@ -48,19 +52,22 @@ function CadastrosPage() {
   return (
     <div className="space-y-5 pb-4">
       <header>
-        <h1 className="text-2xl font-bold">Cadastros da Obra</h1>
+        <h1 className="text-2xl font-bold">Cadastros e Configurações</h1>
         <p className="text-sm text-muted-foreground">
-          Recursos mobilizados no canteiro.
+          Recursos e parâmetros da obra.
         </p>
       </header>
 
       <Tabs defaultValue="equip" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 h-12">
-          <TabsTrigger value="equip" className="text-sm font-bold">
-            <Wrench className="mr-2 h-4 w-4" /> Equipamentos
+        <TabsList className="grid w-full grid-cols-3 h-12">
+          <TabsTrigger value="equip" className="text-xs font-bold">
+            <Wrench className="mr-1.5 h-4 w-4" /> Equip.
           </TabsTrigger>
-          <TabsTrigger value="mo" className="text-sm font-bold">
-            <Users className="mr-2 h-4 w-4" /> Mão de Obra
+          <TabsTrigger value="mo" className="text-xs font-bold">
+            <Users className="mr-1.5 h-4 w-4" /> Mão Obra
+          </TabsTrigger>
+          <TabsTrigger value="param" className="text-xs font-bold">
+            <Settings2 className="mr-1.5 h-4 w-4" /> Parâmetros
           </TabsTrigger>
         </TabsList>
 
@@ -70,10 +77,73 @@ function CadastrosPage() {
         <TabsContent value="mo" className="mt-4">
           <MaoObraTab />
         </TabsContent>
+        <TabsContent value="param" className="mt-4">
+          <ParametrosTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
+
+function ParametrosTab() {
+  const [modelo, setModelo] = useState<ModeloPlanejamento>("descentralizado");
+  const [horario, setHorario] = useState("18:00");
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const p = getParametros();
+    setModelo(p.modelo);
+    setHorario(p.horarioLimite);
+    setLoaded(true);
+  }, []);
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    setParametros({ modelo, horarioLimite: horario });
+    toast.success("Parâmetros salvos!");
+  };
+
+  if (!loaded) return null;
+
+  return (
+    <form
+      onSubmit={handleSave}
+      className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
+    >
+      <div className="space-y-1.5">
+        <Label className="text-sm font-semibold">Modelo de Planejamento</Label>
+        <Select value={modelo} onValueChange={(v) => setModelo(v as ModeloPlanejamento)}>
+          <SelectTrigger className="h-12">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="centralizado">Centralizado na Sede</SelectItem>
+            <SelectItem value="descentralizado">Descentralizado na Obra</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Centralizado: apenas perfil Sede pode editar o planejamento. Apontador fica
+          em modo leitura.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-sm font-semibold">
+          Horário Limite para Planejamento (cut-off)
+        </Label>
+        <Input
+          type="time"
+          value={horario}
+          onChange={(e) => setHorario(e.target.value)}
+          className="h-12"
+        />
+      </div>
+      <Button type="submit" className="h-12 w-full font-bold">
+        Salvar Parâmetros
+      </Button>
+    </form>
+  );
+}
+
 
 function EquipamentosTab() {
   const equipamentos = useEquipamentos();
