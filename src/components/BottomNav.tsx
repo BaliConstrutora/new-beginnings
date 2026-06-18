@@ -37,7 +37,7 @@ export function BottomNav() {
           return (
             <li key={to}>
               <Link
-                to={to}
+                to={to as "/dashboard"}
                 className={`flex flex-col items-center justify-center gap-1 py-2.5 min-h-[60px] text-[11px] font-semibold transition-colors ${
                   active
                     ? "text-primary"
