@@ -8,7 +8,7 @@ import {
   ArrowRight,
   Target,
 } from "lucide-react";
-import { useObra } from "@/lib/obra-store";
+import { useObra, useHydrated } from "@/lib/obra-store";
 import { useRole } from "@/lib/auth-store";
 import { usePlanejamento } from "@/lib/planejamento-store";
 import { useApontamento, calcularAderencia } from "@/lib/apontamento-store";
