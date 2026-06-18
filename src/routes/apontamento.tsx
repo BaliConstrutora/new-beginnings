@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Database } from "lucide-react";
+import { Plus, Trash2, Database, Target, Sparkles } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -20,6 +20,12 @@ import {
 } from "@/components/ui/select";
 import { useObra } from "@/lib/obra-store";
 import { useEquipamentos, useMaoObra } from "@/lib/cadastros-store";
+import { usePlanejamento, uid } from "@/lib/planejamento-store";
+import {
+  saveApontamento,
+  getApontamento,
+  type ServicoRealizado,
+} from "@/lib/apontamento-store";
 
 export const Route = createFileRoute("/apontamento")({
   head: () => ({
@@ -27,75 +33,31 @@ export const Route = createFileRoute("/apontamento")({
       { title: "Apontamento Diário — Bora Bora" },
       {
         name: "description",
-        content:
-          "Registro diário de condições, mão de obra, equipamentos e produção.",
+        content: "Apontamento Realizado x Planejado em campo.",
       },
     ],
   }),
   component: Apontamento,
 });
 
-type Row = { id: number };
-type Equip = Row & {
-  tipo: string;
-  horInicial: string;
-  horFinal: string;
-  diesel: string;
-};
-type MoDireta = Row & {
-  funcao: string;
-  qtd: string;
-  horasNormais: string;
-  horasExtras: string;
-};
-type MoIndireta = Row & {
-  funcao: string;
-  qtd: string;
-  horasNormais: string;
-};
-type Producao = Row & {
-  servico: string;
-  quantidade: string;
-  unidade: string;
-  estacaInicial: string;
-  estacaFinal: string;
+const SERVICO_LABELS: Record<string, string> = {
+  corte: "Corte",
+  aterro: "Aterro",
+  "bota-fora": "Bota-fora",
+  compactacao: "Compactação",
+  "base-brita": "Base de Brita",
+  drenagem: "Drenagem",
 };
 
-const newId = () => Date.now() + Math.floor(Math.random() * 1000);
-const emptyEquip = (): Equip => ({
-  id: newId(),
-  tipo: "",
-  horInicial: "",
-  horFinal: "",
-  diesel: "",
-});
-const emptyDireta = (): MoDireta => ({
-  id: newId(),
-  funcao: "",
-  qtd: "",
-  horasNormais: "",
-  horasExtras: "",
-});
-const emptyIndireta = (): MoIndireta => ({
-  id: newId(),
-  funcao: "",
-  qtd: "",
-  horasNormais: "",
-});
-const emptyProducao = (): Producao => ({
-  id: newId(),
-  servico: "",
-  quantidade: "",
-  unidade: "",
-  estacaInicial: "",
-  estacaFinal: "",
-});
-
-const SERVICOS = [
+const SERVICOS_EXTRA = [
   ["corte", "Corte"],
   ["aterro", "Aterro"],
   ["bota-fora", "Bota-fora"],
   ["compactacao", "Compactação"],
+  ["base-brita", "Base de Brita"],
+  ["drenagem", "Drenagem"],
+  ["limpeza", "Limpeza emergencial"],
+  ["manutencao", "Manutenção"],
 ] as const;
 
 const UNIDADES = [
@@ -105,67 +67,137 @@ const UNIDADES = [
   ["t", "t"],
 ] as const;
 
+type EquipReal = {
+  id: string;
+  equipamentoId: string;
+  horInicial: string;
+  horFinal: string;
+  diesel: string;
+};
+type MoReal = {
+  id: string;
+  funcaoId: string;
+  qtd: string;
+  horasNormais: string;
+  horasExtras: string;
+};
+
 function Apontamento() {
   const hoje = new Date().toISOString().slice(0, 10);
   const navigate = useNavigate();
   const obra = useObra();
   const equipamentosCad = useEquipamentos();
   const maoObraCad = useMaoObra();
-
-  const funcoesDiretas = useMemo(
-    () =>
-      maoObraCad
-        .filter((m) => m.categoria === "direta")
-        .map((m) => [m.id, m.funcao] as [string, string]),
-    [maoObraCad],
-  );
-  const funcoesIndiretas = useMemo(
-    () =>
-      maoObraCad
-        .filter((m) => m.categoria === "indireta")
-        .map((m) => [m.id, m.funcao] as [string, string]),
-    [maoObraCad],
-  );
-  const equipamentosOptions = useMemo(
-    () =>
-      equipamentosCad.map(
-        (e) => [e.id, `${e.prefixo} — ${e.descricao}`] as [string, string],
-      ),
-    [equipamentosCad],
-  );
-
-  const [direta, setDireta] = useState<MoDireta[]>([emptyDireta()]);
-  const [indireta, setIndireta] = useState<MoIndireta[]>([emptyIndireta()]);
-  const [equipamentos, setEquipamentos] = useState<Equip[]>([emptyEquip()]);
-  const [producao, setProducao] = useState<Producao[]>([emptyProducao()]);
+  const plano = usePlanejamento(hoje);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !obra) navigate({ to: "/" });
   }, [obra, navigate]);
 
-  const remove = <T extends Row>(list: T[], id: number) =>
-    list.length > 1 ? list.filter((r) => r.id !== id) : list;
+  const equipMap = useMemo(
+    () => new Map(equipamentosCad.map((e) => [e.id, e])),
+    [equipamentosCad],
+  );
+  const moMap = useMemo(
+    () => new Map(maoObraCad.map((m) => [m.id, m])),
+    [maoObraCad],
+  );
+
+  // Serviços = derivados do plano + extras (não planejados)
+  const [servicos, setServicos] = useState<ServicoRealizado[]>([]);
+  const [equipamentos, setEquipamentos] = useState<EquipReal[]>([]);
+  const [equipe, setEquipe] = useState<MoReal[]>([]);
+
+  // Hidratar a partir do plano (apenas uma vez, ou quando plano mudar)
+  useEffect(() => {
+    const existing = getApontamento(hoje);
+    if (existing) {
+      setServicos(existing.servicos);
+    } else if (plano) {
+      setServicos(
+        plano.servicos.map((s) => ({
+          id: s.id,
+          servico: s.servico,
+          unidade: s.unidade,
+          metaQuantidade: s.metaQuantidade,
+          realizado: "",
+          estacaInicial: "",
+          estacaFinal: "",
+        })),
+      );
+    }
+    if (plano) {
+      setEquipamentos(
+        plano.equipamentos.map((e) => ({
+          id: e.id,
+          equipamentoId: e.equipamentoId,
+          horInicial: "",
+          horFinal: "",
+          diesel: "",
+        })),
+      );
+      setEquipe(
+        plano.equipe.map((e) => ({
+          id: e.id,
+          funcaoId: e.funcaoId,
+          qtd: e.qtdPrevista,
+          horasNormais: "",
+          horasExtras: "",
+        })),
+      );
+    }
+  }, [plano, hoje]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    saveApontamento({
+      data: hoje,
+      frente: plano?.frente ?? "",
+      servicos,
+    });
     toast.success("Apontamento salvo com sucesso!", {
-      description: "Os dados do dia foram registrados.",
+      description: "Realizado registrado contra o planejado.",
     });
   };
+
+  const addExtra = () =>
+    setServicos((p) => [
+      ...p,
+      {
+        id: uid(),
+        servico: "",
+        unidade: "",
+        realizado: "",
+        estacaInicial: "",
+        estacaFinal: "",
+        extraPlano: true,
+      },
+    ]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 pb-4">
       <header>
         <h1 className="text-2xl font-bold">Apontamento Diário</h1>
         <p className="text-sm text-muted-foreground">
-          Preencha as etapas e salve no final.
+          {plano
+            ? `Plano carregado · Frente: ${plano.frente || "—"}`
+            : "Nenhum planejamento encontrado para hoje."}
         </p>
+        {!plano && (
+          <Link
+            to="/planejamento"
+            className="mt-2 inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-amber-500/60 bg-amber-500/10 px-3 py-2 text-sm font-semibold text-amber-800 dark:text-amber-300"
+          >
+            <Target className="h-4 w-4" />
+            Criar planejamento de hoje
+          </Link>
+        )}
       </header>
 
       <Accordion
         type="single"
         collapsible
-        defaultValue="condicoes"
+        defaultValue="producao"
         className="space-y-3"
       >
         <Step value="condicoes" n={1} title="Condições">
@@ -173,7 +205,7 @@ function Apontamento() {
             <Input type="date" defaultValue={hoje} readOnly className="h-12" />
           </Field>
           <Field label="Clima">
-            <Dropdown
+            <SimpleDropdown
               placeholder="Selecione"
               options={[
                 ["ensolarado", "Ensolarado"],
@@ -183,203 +215,307 @@ function Apontamento() {
               ]}
             />
           </Field>
-          <Field label="Frente de Serviço">
-            <Dropdown
-              placeholder="Selecione"
-              options={[
-                ["terraplenagem", "Terraplenagem"],
-                ["drenagem", "Drenagem"],
-                ["pavimentacao", "Pavimentação"],
-                ["obras-arte", "Obras de arte"],
-              ]}
-            />
-          </Field>
         </Step>
 
-        <Step value="mao-obra" n={2} title="Mão de Obra">
-          <SubSection title="Direta (Produção)">
-            {funcoesDiretas.length === 0 && <EmptyCadastro tipo="funções diretas" />}
-            {direta.map((r, idx) => (
-              <RowCard
-                key={r.id}
-                label={`Direta ${idx + 1}`}
-                onRemove={
-                  direta.length > 1
-                    ? () => setDireta((p) => remove(p, r.id))
-                    : undefined
-                }
+        <Step value="producao" n={2} title="Produção (Planejado x Realizado)">
+          {servicos.length === 0 && (
+            <p className="rounded-xl border-2 border-dashed border-border bg-background p-4 text-center text-sm text-muted-foreground">
+              Nenhum serviço — crie o planejamento ou adicione um serviço extra.
+            </p>
+          )}
+          {servicos.map((s, idx) => (
+            <ServicoCard
+              key={s.id}
+              servico={s}
+              idx={idx}
+              onChange={(patch) =>
+                setServicos((p) =>
+                  p.map((x) => (x.id === s.id ? { ...x, ...patch } : x)),
+                )
+              }
+              onRemove={
+                s.extraPlano
+                  ? () => setServicos((p) => p.filter((x) => x.id !== s.id))
+                  : undefined
+              }
+            />
+          ))}
+          <Button
+            type="button"
+            onClick={addExtra}
+            className="h-12 w-full bg-orange-600 font-bold text-white hover:bg-orange-700"
+          >
+            <Sparkles className="mr-2 h-4 w-4" />
+            Adicionar Serviço Extra/Não Planejado
+          </Button>
+        </Step>
+
+        <Step value="equipamentos" n={3} title="Equipamentos (Realizado)">
+          {equipamentos.length === 0 && <EmptyPlano tipo="equipamentos previstos" />}
+          {equipamentos.map((eq, idx) => {
+            const info = equipMap.get(eq.equipamentoId);
+            return (
+              <div
+                key={eq.id}
+                className="space-y-3 rounded-xl border border-border bg-background p-3"
               >
-                <Field label="Função">
-                  <Dropdown
-                    placeholder={
-                      funcoesDiretas.length ? "Selecione" : "Cadastre antes"
+                <p className="text-sm font-bold">
+                  {info ? `${info.prefixo} — ${info.descricao}` : `Equipamento ${idx + 1}`}
+                </p>
+                <Field label="Horímetro Inicial">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={eq.horInicial}
+                    onChange={(e) =>
+                      setEquipamentos((p) =>
+                        p.map((x) =>
+                          x.id === eq.id ? { ...x, horInicial: e.target.value } : x,
+                        ),
+                      )
                     }
-                    options={funcoesDiretas}
-                    disabled={funcoesDiretas.length === 0}
+                    placeholder="0"
+                    className="h-12"
                   />
                 </Field>
-                <Field label="Quantidade de Pessoas">
-                  <Input type="number" inputMode="numeric" placeholder="0" className="h-12" />
+                <Field label="Horímetro Final">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={eq.horFinal}
+                    onChange={(e) =>
+                      setEquipamentos((p) =>
+                        p.map((x) =>
+                          x.id === eq.id ? { ...x, horFinal: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="0"
+                    className="h-12"
+                  />
                 </Field>
-                <Field label="Horas Normais">
-                  <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
+                <Field label="Diesel Consumido (L)">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={eq.diesel}
+                    onChange={(e) =>
+                      setEquipamentos((p) =>
+                        p.map((x) =>
+                          x.id === eq.id ? { ...x, diesel: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="0"
+                    className="h-12"
+                  />
+                </Field>
+              </div>
+            );
+          })}
+        </Step>
+
+        <Step value="equipe" n={4} title="Mão de Obra (Realizado)">
+          {equipe.length === 0 && <EmptyPlano tipo="equipe prevista" />}
+          {equipe.map((m, idx) => {
+            const info = moMap.get(m.funcaoId);
+            return (
+              <div
+                key={m.id}
+                className="space-y-3 rounded-xl border border-border bg-background p-3"
+              >
+                <p className="text-sm font-bold">
+                  {info ? `${info.funcao} (${info.categoria})` : `Função ${idx + 1}`}
+                  <span className="ml-2 text-xs font-semibold text-muted-foreground">
+                    Previsto: {m.qtd || "—"} pessoa(s)
+                  </span>
+                </p>
+                <Field label="Horas Reais Trabalhadas">
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={m.horasNormais}
+                    onChange={(e) =>
+                      setEquipe((p) =>
+                        p.map((x) =>
+                          x.id === m.id ? { ...x, horasNormais: e.target.value } : x,
+                        ),
+                      )
+                    }
+                    placeholder="0"
+                    className="h-12"
+                  />
                 </Field>
                 <Field label="Horas Extras">
-                  <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-                </Field>
-              </RowCard>
-            ))}
-            <AddButton onClick={() => setDireta((p) => [...p, emptyDireta()])}>
-              Adicionar mais MO Direta
-            </AddButton>
-          </SubSection>
-
-          <div className="my-4 h-px bg-border" />
-
-          <SubSection title="Indireta (Apoio)">
-            {funcoesIndiretas.length === 0 && (
-              <EmptyCadastro tipo="funções indiretas" />
-            )}
-            {indireta.map((r, idx) => (
-              <RowCard
-                key={r.id}
-                label={`Indireta ${idx + 1}`}
-                onRemove={
-                  indireta.length > 1
-                    ? () => setIndireta((p) => remove(p, r.id))
-                    : undefined
-                }
-              >
-                <Field label="Função">
-                  <Dropdown
-                    placeholder={
-                      funcoesIndiretas.length ? "Selecione" : "Cadastre antes"
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={m.horasExtras}
+                    onChange={(e) =>
+                      setEquipe((p) =>
+                        p.map((x) =>
+                          x.id === m.id ? { ...x, horasExtras: e.target.value } : x,
+                        ),
+                      )
                     }
-                    options={funcoesIndiretas}
-                    disabled={funcoesIndiretas.length === 0}
-                  />
-                </Field>
-                <Field label="Quantidade de Pessoas">
-                  <Input type="number" inputMode="numeric" placeholder="0" className="h-12" />
-                </Field>
-                <Field label="Horas Normais">
-                  <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-                </Field>
-              </RowCard>
-            ))}
-            <AddButton onClick={() => setIndireta((p) => [...p, emptyIndireta()])}>
-              Adicionar mais MO Indireta
-            </AddButton>
-          </SubSection>
-        </Step>
-
-        <Step value="equipamentos" n={3} title="Equipamentos">
-          {equipamentosOptions.length === 0 && <EmptyCadastro tipo="equipamentos" />}
-          {equipamentos.map((eq, idx) => (
-            <RowCard
-              key={eq.id}
-              label={`Equipamento ${idx + 1}`}
-              onRemove={
-                equipamentos.length > 1
-                  ? () => setEquipamentos((p) => remove(p, eq.id))
-                  : undefined
-              }
-            >
-              <Field label="Equipamento">
-                <Dropdown
-                  placeholder={
-                    equipamentosOptions.length ? "Selecione" : "Cadastre antes"
-                  }
-                  options={equipamentosOptions}
-                  disabled={equipamentosOptions.length === 0}
-                />
-              </Field>
-              <Field label="Horímetro Inicial">
-                <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-              </Field>
-              <Field label="Horímetro Final">
-                <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-              </Field>
-              <Field label="Diesel (L)">
-                <Input type="number" inputMode="decimal" placeholder="0" className="h-12" />
-              </Field>
-            </RowCard>
-          ))}
-          <AddButton onClick={() => setEquipamentos((p) => [...p, emptyEquip()])}>
-            Adicionar mais um equipamento
-          </AddButton>
-        </Step>
-
-        <Step value="producao" n={4} title="Produção">
-          {producao.map((p, idx) => (
-            <RowCard
-              key={p.id}
-              label={`Serviço ${idx + 1}`}
-              onRemove={
-                producao.length > 1
-                  ? () => setProducao((prev) => remove(prev, p.id))
-                  : undefined
-              }
-            >
-              <Field label="Serviço Executado">
-                <Dropdown placeholder="Selecione" options={SERVICOS} />
-              </Field>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Quantidade">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
                     placeholder="0"
-                    className="h-12"
-                  />
-                </Field>
-                <Field label="Unidade">
-                  <Dropdown placeholder="Un." options={UNIDADES} />
-                </Field>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Estaca Inicial">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    required
-                    className="h-12"
-                  />
-                </Field>
-                <Field label="Estaca Final">
-                  <Input
-                    type="number"
-                    inputMode="decimal"
-                    placeholder="0"
-                    required
                     className="h-12"
                   />
                 </Field>
               </div>
-            </RowCard>
-          ))}
-          <AddButton onClick={() => setProducao((p) => [...p, emptyProducao()])}>
-            Adicionar mais um serviço
-          </AddButton>
+            );
+          })}
         </Step>
       </Accordion>
 
       <Button type="submit" className="h-14 w-full text-base font-bold shadow-md">
-        Salvar Apontamento
+        Salvar Apontamento (Realizado)
       </Button>
     </form>
   );
 }
 
-function EmptyCadastro({ tipo }: { tipo: string }) {
+function ServicoCard({
+  servico,
+  idx,
+  onChange,
+  onRemove,
+}: {
+  servico: ServicoRealizado;
+  idx: number;
+  onChange: (patch: Partial<ServicoRealizado>) => void;
+  onRemove?: () => void;
+}) {
+  const meta =
+    servico.metaQuantidade && !servico.extraPlano
+      ? `Meta: ${servico.metaQuantidade} ${servico.unidade || ""}`
+      : null;
+  const label =
+    SERVICO_LABELS[servico.servico] ||
+    servico.servico ||
+    (servico.extraPlano ? `Extra ${idx + 1}` : `Serviço ${idx + 1}`);
+
+  return (
+    <div
+      className={`space-y-3 rounded-xl border-2 p-3 ${
+        servico.extraPlano
+          ? "border-orange-500/50 bg-orange-500/5"
+          : "border-primary/40 bg-primary/5"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-bold text-foreground">
+            {label}
+            {servico.extraPlano && (
+              <span className="ml-2 rounded bg-orange-600 px-2 py-0.5 text-[10px] font-black uppercase text-white">
+                Extra
+              </span>
+            )}
+          </p>
+          {meta && (
+            <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-bold text-primary">
+              <Target className="h-3 w-3" /> {meta}
+            </p>
+          )}
+        </div>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+            aria-label="Remover"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      {servico.extraPlano && (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Serviço">
+            <Select
+              value={servico.servico}
+              onValueChange={(v) => onChange({ servico: v })}
+            >
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                {SERVICOS_EXTRA.map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Unidade">
+            <Select
+              value={servico.unidade}
+              onValueChange={(v) => onChange({ unidade: v })}
+            >
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Un." />
+              </SelectTrigger>
+              <SelectContent>
+                {UNIDADES.map(([v, l]) => (
+                  <SelectItem key={v} value={v}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+      )}
+
+      <Field label={`Realizado (Quantidade Real)${servico.unidade ? ` em ${servico.unidade}` : ""}`}>
+        <Input
+          type="number"
+          inputMode="decimal"
+          value={servico.realizado}
+          onChange={(e) => onChange({ realizado: e.target.value })}
+          placeholder="0"
+          className="h-12 font-bold"
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Estaca Inicial">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={servico.estacaInicial}
+            onChange={(e) => onChange({ estacaInicial: e.target.value })}
+            placeholder="0"
+            className="h-12"
+            required
+          />
+        </Field>
+        <Field label="Estaca Final">
+          <Input
+            type="number"
+            inputMode="decimal"
+            value={servico.estacaFinal}
+            onChange={(e) => onChange({ estacaFinal: e.target.value })}
+            placeholder="0"
+            className="h-12"
+            required
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
+function EmptyPlano({ tipo }: { tipo: string }) {
   return (
     <Link
-      to="/cadastros"
+      to="/planejamento"
       className="flex items-center gap-2 rounded-xl border-2 border-dashed border-amber-500/60 bg-amber-500/10 p-3 text-sm font-semibold text-amber-800 dark:text-amber-300"
     >
       <Database className="h-4 w-4 shrink-0" />
-      Nenhuma {tipo} cadastrada — toque para cadastrar.
+      Sem {tipo} no plano — toque para planejar.
     </Link>
   );
 }
@@ -402,90 +538,26 @@ function Step({
     >
       <AccordionTrigger className="text-base font-bold hover:no-underline">
         <span className="flex items-center gap-3">
-          <Badge n={n} /> {title}
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+            {n}
+          </span>
+          {title}
         </span>
       </AccordionTrigger>
-      <AccordionContent className="space-y-4 pt-2">{children}</AccordionContent>
+      <AccordionContent className="space-y-3 pt-2">{children}</AccordionContent>
     </AccordionItem>
   );
 }
 
-function SubSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-3">
-      <p className="text-xs font-black uppercase tracking-wider text-primary">
-        {title}
-      </p>
-      {children}
-    </div>
-  );
-}
-
-function RowCard({
-  label,
-  onRemove,
-  children,
-}: {
-  label: string;
-  onRemove?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-3 rounded-xl border border-border bg-background p-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-bold text-muted-foreground">{label}</p>
-        {onRemove && (
-          <button
-            type="button"
-            onClick={onRemove}
-            className="grid h-9 w-9 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
-            aria-label="Remover"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function AddButton({
-  onClick,
-  children,
-}: {
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={onClick}
-      className="h-12 w-full border-2 border-dashed border-primary text-primary hover:bg-primary/10"
-    >
-      <Plus className="mr-2 h-4 w-4" /> {children}
-    </Button>
-  );
-}
-
-function Dropdown({
+function SimpleDropdown({
   placeholder,
   options,
-  disabled,
 }: {
   placeholder: string;
   options: ReadonlyArray<readonly [string, string]>;
-  disabled?: boolean;
 }) {
   return (
-    <Select disabled={disabled}>
+    <Select>
       <SelectTrigger className="h-12">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
@@ -509,10 +581,5 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-function Badge({ n }: { n: number }) {
-  return (
-    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-      {n}
-    </span>
-  );
-}
+// avoid unused import warning
+void Plus;
