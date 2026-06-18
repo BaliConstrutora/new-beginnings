@@ -21,7 +21,7 @@ import {
   useEquipamentos,
   useMaoObra,
 } from "@/lib/cadastros-store";
-import { useObra } from "@/lib/obra-store";
+import { useObra, useHydrated } from "@/lib/obra-store";
 import {
   getParametros,
   setParametros,
