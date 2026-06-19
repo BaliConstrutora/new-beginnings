@@ -1,12 +1,26 @@
 ## Diagnóstico
 
-A tela de entrada do "Bora Bora" está correta no código (Select de obra + botão Entrar), mas o preview não carrega o módulo do app — runtime error `Failed to fetch dynamically imported module: virtual:tanstack-start-client-entry`.
+1. **Duplicação confirmada:** `src/routes/__root.tsx` já renderiza `<AppHeader />` e `<BottomNav />` globalmente (linhas 125 e 129). O arquivo `src/routes/relatorios.tsx` importa e renderiza os dois novamente (linhas 84 e 261), causando barras duplicadas e potencial remount/flicker apenas nessa rota.
 
-A causa está nos logs do Vite: quando removi `checklist.tsx` e `configuracoes.tsx`, o gerador de rotas do TanStack travou em estado inconsistente (`Failed to load url /src/routes/configuracoes.tsx ... Does the file exist?`). O `routeTree.gen.ts` já foi regenerado corretamente (sem essas rotas), mas o dev server continua servindo bundles antigos que tentam importar os arquivos deletados, então a página inicial nunca termina de hidratar e o dropdown nunca aparece.
+2. **Filtro por role no BottomNav:** o código atual já inicializa `useState(() => getRole())`, então no SSR/primeiro client render o valor pode ser `null` e o filtro `role ? i.roles.includes(role) : true` mantém todos os itens — ok. Porém, se `getRole()` retornar um role válido somente após hidratação, há um re-render que pode parecer flicker. Para garantir estabilidade, tratamos `role === null` como "mostrar tudo" (já é o comportamento), e removemos qualquer fonte de remount.
 
-## Correção
+## Plano de correção (mínimo e focado)
 
-1. Reiniciar o dev server para forçar o Vite a descartar o cache de módulos e o plugin do TanStack Router a reler o `routeTree.gen.ts` limpo.
-2. Pedir um refresh forte (Ctrl/Cmd+Shift+R) no preview para baixar os novos chunks.
+### 1. `src/routes/relatorios.tsx`
+- Remover imports de `AppHeader` e `BottomNav`.
+- Remover `<AppHeader />` (linha 84) e `<BottomNav />` (linha 261) do JSX.
+- Ajustar o wrapper para usar o mesmo padding/layout que as outras rotas (já contemplado pelo `__root.tsx`).
 
-Nenhuma alteração de código é necessária — a tela de seleção de obra, o dashboard e o apontamento já estão implementados corretamente.
+### 2. `src/components/BottomNav.tsx`
+- Manter `useState(() => getRole())` (inicialização síncrona via lazy initializer já evita o "null → role" flicker em ambientes client-only).
+- Garantia adicional: durante hidratação, se `role` for `null`, manter o comportamento atual (mostrar todos os itens) — nenhuma mudança necessária aqui, já está correto.
+- Nenhuma alteração extra se a duplicação for a real causa do sumiço; a remoção em `relatorios.tsx` resolve.
+
+### 3. Verificação
+- Conferir com Playwright em `/relatorios`: deve haver apenas um header e um bottom nav, com todos os ícones permitidos pelo role visíveis e estáveis.
+- Conferir nas demais rotas (`/dashboard`, `/cadastros`, `/planejamento`, `/apontamento`) que nada mudou.
+
+## Arquivos a editar
+- `src/routes/relatorios.tsx` (remover header/nav duplicados)
+
+Nenhuma outra rota importa `BottomNav`/`AppHeader` diretamente — verificado via grep.
