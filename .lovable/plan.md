@@ -1,26 +1,36 @@
-## Diagnóstico
+## Objetivo
+Substituir `src/routes/planejamento.tsx` pelo código colado, reconstruindo o JSX que se perdeu na colagem (a estrutura textual ficou sem tags) e mantendo todas as funções/lógica enviadas.
 
-1. **Duplicação confirmada:** `src/routes/__root.tsx` já renderiza `<AppHeader />` e `<BottomNav />` globalmente (linhas 125 e 129). O arquivo `src/routes/relatorios.tsx` importa e renderiza os dois novamente (linhas 84 e 261), causando barras duplicadas e potencial remount/flicker apenas nessa rota.
+## Escopo
+- Único arquivo alterado: `src/routes/planejamento.tsx`.
+- Sem mudanças em stores, rotas, BottomNav ou outras telas.
 
-2. **Filtro por role no BottomNav:** o código atual já inicializa `useState(() => getRole())`, então no SSR/primeiro client render o valor pode ser `null` e o filtro `role ? i.roles.includes(role) : true` mantém todos os itens — ok. Porém, se `getRole()` retornar um role válido somente após hidratação, há um re-render que pode parecer flicker. Para garantir estabilidade, tratamos `role === null` como "mostrar tudo" (já é o comportamento), e removemos qualquer fonte de remount.
+## O que será preservado do código colado
+- Imports (TanStack Router, lucide, sonner, stores `obra-store`, `cadastros-store`, `planejamento-store`).
+- Tipos `ItemPlanejado`, `FormState` e constantes `STORAGE_KEY`, `FORM_VAZIO`.
+- Helpers: `loadItens`, `saveItens`, `num`, `calcular`, `fmt`, `uid`.
+- Hooks/estado: `useObra`, `useHydrated`, `useFrentes`, redirecionamento para `/` quando não há obra, persistência em localStorage, `filtroData`, `hojeLabel`, `openSections`.
+- Lógica de `handleConfirmar` chamando `savePlanejamento` com o mesmo payload.
+- Mock de importação de planilha (3 itens fictícios + toast de sucesso).
+- Cálculos automáticos área/volume/peso e `qtdPlanejada = volume`.
 
-## Plano de correção (mínimo e focado)
+## JSX a reconstruir (foi perdido na colagem)
+- **Header**: título "Planejamento", `hojeLabel`, badge do nome da obra.
+- **3 KPIs no topo**: Itens hoje, Área total (m²), Volume total (m³).
+- **Seção 0 — Importar planilha**: `SectionHeader` + bloco com instruções e `<label>` estilizado contendo `<input type="file" accept=".xlsx,.csv" hidden>` que dispara o mock.
+- **Seção 1 — Novo item**: `<FormNovoItem onSalvar={adicionarItem} frentesDisponiveis={frentesDisponiveis} />`.
+- **Seção 2 — Itens do dia**: filtro por data (input `type="date"` com ícone `Calendar`), estado vazio com ícone, ou lista de `ItemPlanejadoCard` (header clicável com frente + KM, badge de quantidade, expandido mostra Ini/Fim/Pista, Área/Volume/Peso e botão Remover com `Trash2`).
+- **Botão final** "Confirmar planejamento do dia" (laranja, `CheckCircle2`) só quando `itensDoDia.length > 0`.
+- **SectionHeader**: número em círculo laranja, título, badge opcional, chevron up/down.
+- **CampoCalculado**: ícone `Calculator`, label, valor formatado, unidade.
+- **FormNovoItem**: duas subseções colapsáveis
+  - A — Identificação: data (com ícone `Calendar`), select de Frente (alimentado por `frentesDisponiveis`, com fallback "Nenhuma frente cadastrada"), KM inicial/final, Faixa, Pista.
+  - B — Controle geométrico: 4 inputs numéricos (Comprimento, Largura, Espessura, Densidade) + 3 `CampoCalculado` (Área, Volume, Peso) + ícone `Lock` indicando "Calculado automaticamente".
+  - Botão "Adicionar ao planejamento" com `Plus`, desabilitado até `podeSalvar`.
 
-### 1. `src/routes/relatorios.tsx`
-- Remover imports de `AppHeader` e `BottomNav`.
-- Remover `<AppHeader />` (linha 84) e `<BottomNav />` (linha 261) do JSX.
-- Ajustar o wrapper para usar o mesmo padding/layout que as outras rotas (já contemplado pelo `__root.tsx`).
+## Estilo
+Tailwind utilitário no padrão do arquivo atual (cantos arredondados `rounded-2xl`, foco laranja `focus:ring-orange-400`, botões laranja `bg-orange-500`). Sem novos tokens nem novas dependências.
 
-### 2. `src/components/BottomNav.tsx`
-- Manter `useState(() => getRole())` (inicialização síncrona via lazy initializer já evita o "null → role" flicker em ambientes client-only).
-- Garantia adicional: durante hidratação, se `role` for `null`, manter o comportamento atual (mostrar todos os itens) — nenhuma mudança necessária aqui, já está correto.
-- Nenhuma alteração extra se a duplicação for a real causa do sumiço; a remoção em `relatorios.tsx` resolve.
-
-### 3. Verificação
-- Conferir com Playwright em `/relatorios`: deve haver apenas um header e um bottom nav, com todos os ícones permitidos pelo role visíveis e estáveis.
-- Conferir nas demais rotas (`/dashboard`, `/cadastros`, `/planejamento`, `/apontamento`) que nada mudou.
-
-## Arquivos a editar
-- `src/routes/relatorios.tsx` (remover header/nav duplicados)
-
-Nenhuma outra rota importa `BottomNav`/`AppHeader` diretamente — verificado via grep.
+## Validação
+- Confirmar que o build passa (sem JSX desbalanceado nem imports não usados).
+- Smoke manual no preview: abrir `/planejamento`, adicionar item, importar planilha mock, confirmar dia → toast.
