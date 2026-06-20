@@ -34,6 +34,7 @@ export const Route = createFileRoute("/planejamento")({
 type ItemPlanejado = {
   id: string;
   frente: string;
+  descricao: string;
   servico: string;
   unidade: string;
   data: string;
@@ -223,6 +224,7 @@ function PlanejamentoPage() {
                     const mock: ItemPlanejado[] = [1, 2, 3].map((n) => ({
                       id: `mock-${Date.now()}-${n}`,
                       frente: frenteNome,
+                      descricao: `Item importado ${n}`,
                       servico: frenteNome,
                       unidade: "m³",
                       data: filtroData,
@@ -419,7 +421,7 @@ function ItemPlanejadoCard({
         <div>
           <div className="text-sm font-semibold text-gray-900">{item.frente}</div>
           <div className="text-[11px] text-gray-500">
-            {item.refIni} → {item.refFim}
+            {item.descricao || `${item.refIni} → ${item.refFim}`}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -479,6 +481,7 @@ function ItemPlanejadoCard({
 type FormState = {
   data: string;
   frenteNome: string;
+  descricao: string;
   refIni: string;
   refFim: string;
   faixa: string;
@@ -492,6 +495,7 @@ type FormState = {
 const FORM_VAZIO: FormState = {
   data: "",
   frenteNome: "",
+  descricao: "",
   refIni: "",
   refFim: "",
   faixa: "",
@@ -532,6 +536,7 @@ function FormNovoItem({
   const podeSalvar =
     !!form.data &&
     !!form.frenteNome &&
+    !!form.descricao.trim() &&
     !!form.refIni &&
     !!form.refFim &&
     num(form.comprimento) > 0;
@@ -540,6 +545,7 @@ function FormNovoItem({
     const novoItem: ItemPlanejado = {
       id: uid(),
       frente: form.frenteNome,
+      descricao: form.descricao.trim(),
       servico: form.frenteNome,
       unidade: "m³",
       data: form.data,
@@ -622,6 +628,19 @@ function FormNovoItem({
                   ))}
                 </select>
               )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1.5">
+                Descrição do item
+              </label>
+              <textarea
+                value={form.descricao}
+                onChange={(e) => set("descricao", e.target.value)}
+                placeholder="Descreva o item planejado..."
+                rows={3}
+                className="w-full text-sm border border-gray-200 rounded-xl px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-orange-400 text-gray-900 placeholder-gray-300 resize-none"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
