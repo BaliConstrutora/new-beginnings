@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   ClipboardList,
   Plus,
   Trash2,
@@ -22,10 +23,7 @@ export const Route = createFileRoute("/apontamento")({
   head: () => ({
     meta: [
       { title: "Apontamento Diário — Bora Bora" },
-      {
-        name: "description",
-        content: "Apontamento Realizado x Planejado em campo.",
-      },
+      { name: "description", content: "Apontamento Realizado x Planejado em campo." },
     ],
   }),
   component: ApontamentoPage,
@@ -79,6 +77,12 @@ type ApontamentoItem = {
   densidade: number;
   areaPlanejada: number;
   volumePlanejado: number;
+  comprimentoRealizado: string;
+  larguraRealizada: string;
+  espessuraRealizada: string;
+  areaRealizada: number;
+  volumeRealizado: number;
+  pesoRealizado: number;
   quantidadeRealizada: string;
   estacaInicial: string;
   estacaFinal: string;
@@ -122,8 +126,7 @@ function ApontamentoPage() {
   }, [hydrated, obra, navigate]);
 
   const [tela, setTela] = useState<Tela>("inicio");
-  const [itemSelecionado, setItemSelecionado] =
-    useState<ApontamentoItem | null>(null);
+  const [itemSelecionado, setItemSelecionado] = useState<ApontamentoItem | null>(null);
   const [itensApontados, setItensApontados] = useState<ApontamentoItem[]>([]);
 
   const hojeLabel = useMemo(
@@ -142,10 +145,6 @@ function ApontamentoPage() {
     return plano.servicos.map((s) => {
       const existente = itensApontados.find((a) => a.itemId === s.id);
       if (existente) return existente;
-      const C = parseFloat(s.comprimento) || 0;
-      const L = parseFloat(s.largura) || 0;
-      const E = parseFloat(s.espessura) || 0;
-      const D = parseFloat(s.densidade) || 0;
       return {
         itemId: s.id,
         descricao: s.servico,
@@ -153,13 +152,23 @@ function ApontamentoPage() {
           frentesCad.find((f) => f.id === plano.frente)?.nome ?? plano.frente,
         refIni: s.kmInicial,
         refFim: s.kmFinal,
-        comprimento: C,
-        largura: L,
-        espessura: E,
-        densidade: D,
-        areaPlanejada: C * L,
-        volumePlanejado: C * L * E,
+        comprimento: parseFloat(s.comprimento) || 0,
+        largura: parseFloat(s.largura) || 0,
+        espessura: parseFloat(s.espessura) || 0,
+        densidade: parseFloat(s.densidade) || 0,
+        areaPlanejada:
+          (parseFloat(s.comprimento) || 0) * (parseFloat(s.largura) || 0),
+        volumePlanejado:
+          (parseFloat(s.comprimento) || 0) *
+          (parseFloat(s.largura) || 0) *
+          (parseFloat(s.espessura) || 0),
         quantidadeRealizada: "",
+        comprimentoRealizado: "",
+        larguraRealizada: "",
+        espessuraRealizada: "",
+        areaRealizada: 0,
+        volumeRealizado: 0,
+        pesoRealizado: 0,
         estacaInicial: s.kmInicial,
         estacaFinal: s.kmFinal,
         materiais: [],
@@ -222,49 +231,51 @@ function ApontamentoPage() {
   // ---- TELA INÍCIO ----
   if (tela === "inicio") {
     return (
-      <div className="px-4 py-6 space-y-5 max-w-2xl mx-auto">
-        <header className="space-y-1">
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+      <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5">
+        <div className="space-y-1">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {hojeLabel}
           </p>
-          <h1 className="text-2xl font-bold tracking-tight">
-            Apontamento Diário
-          </h1>
-        </header>
+          <h1 className="text-2xl font-bold text-foreground">Apontamento Diário</h1>
+        </div>
 
         <div className="space-y-3">
           <button
+            type="button"
             onClick={() => setTela("lista")}
             className="w-full flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-colors hover:border-primary/40"
           >
             <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
               <ClipboardList className="h-6 w-6" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm">Selecionar item planejado</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                Selecionar item planejado
+              </p>
+              <p className="text-xs text-muted-foreground">
                 {plano
                   ? `${itensDoDia.length} itens planejados para hoje`
                   : "Nenhum planejamento para hoje"}
               </p>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
 
           <button
+            type="button"
             onClick={() => setTela("avulso")}
             className="w-full flex items-center gap-4 rounded-2xl border-2 border-border bg-card p-4 text-left transition-colors hover:border-primary/40"
           >
-            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-muted text-foreground">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
               <Plus className="h-6 w-6" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm">Novo apontamento avulso</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Serviço não planejado
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                Novo apontamento avulso
               </p>
+              <p className="text-xs text-muted-foreground">Serviço não planejado</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
       </div>
@@ -274,39 +285,38 @@ function ApontamentoPage() {
   // ---- TELA LISTA ----
   if (tela === "lista") {
     return (
-      <div className="px-4 py-6 space-y-5 max-w-2xl mx-auto">
-        <header className="flex items-center gap-3">
+      <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-5">
+        <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => setTela("inicio")}
             className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border bg-card"
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold leading-tight">Itens planejados</h1>
+          <div className="flex-1">
+            <h1 className="text-lg font-bold text-foreground">Itens planejados</h1>
             <p className="text-xs text-muted-foreground">{hojeLabel}</p>
           </div>
-        </header>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-border bg-card p-3">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               Total planejado
             </p>
-            <p className="text-xl font-bold mt-0.5">
+            <p className="mt-1 text-xl font-bold text-foreground">
               {itensDoDia.length}{" "}
-              <span className="text-xs text-muted-foreground font-normal">
-                itens
-              </span>
+              <span className="text-xs font-normal text-muted-foreground">itens</span>
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-card p-3">
-            <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               Apontados hoje
             </p>
-            <p className="text-xl font-bold mt-0.5 text-primary">
+            <p className="mt-1 text-xl font-bold text-foreground">
               {apontados}{" "}
-              <span className="text-xs text-muted-foreground font-normal">
+              <span className="text-xs font-normal text-muted-foreground">
                 de {itensDoDia.length}
               </span>
             </p>
@@ -314,9 +324,9 @@ function ApontamentoPage() {
         </div>
 
         {itensDoDia.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-border p-8 text-center space-y-2">
-            <ClipboardList className="h-8 w-8 mx-auto text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
+          <div className="rounded-2xl border-2 border-dashed border-border bg-card p-8 text-center">
+            <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground" />
+            <p className="mt-2 text-sm text-muted-foreground">
               Nenhum item planejado para hoje.
             </p>
           </div>
@@ -366,7 +376,7 @@ function ApontamentoPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Card de item planejado na lista
+// Card de item planejado
 // ---------------------------------------------------------------------------
 function ItemPlanejadoCard({
   item,
@@ -375,33 +385,26 @@ function ItemPlanejadoCard({
   item: ApontamentoItem;
   onSelecionar: () => void;
 }) {
-  const pct =
-    item.salvo && item.volumePlanejado > 0
-      ? Math.round(
-          (parseFloat(item.quantidadeRealizada || "0") / item.volumePlanejado) *
-            100,
-        )
-      : 0;
-
   return (
-    <div className="rounded-2xl border-2 border-border bg-card overflow-hidden">
-      <div className="p-4 space-y-3">
+    <div className="overflow-hidden rounded-2xl border-2 border-border bg-card">
+      <div className="space-y-3 p-4">
         <div className="flex items-start justify-between gap-2">
-          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
             {item.frente}
           </span>
           <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
               item.salvo
                 ? "bg-emerald-100 text-emerald-700"
-                : "bg-amber-100 text-amber-700"
+                : "bg-muted text-muted-foreground"
             }`}
           >
+            {item.salvo && <CheckCircle2 className="h-3 w-3" />}
             {item.salvo ? "Apontado" : "Pendente"}
           </span>
         </div>
 
-        <p className="font-semibold text-sm leading-snug">{item.descricao}</p>
+        <p className="text-sm font-semibold text-foreground">{item.descricao}</p>
         <p className="text-xs text-muted-foreground">
           {item.refIni} → {item.refFim}
         </p>
@@ -413,48 +416,51 @@ function ItemPlanejadoCard({
             { label: "Espessura", value: `${fmt(item.espessura)} m` },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-lg bg-muted/50 p-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 {label}
               </p>
-              <p className="text-xs font-semibold mt-0.5">{value}</p>
+              <p className="text-xs font-semibold text-foreground">{value}</p>
             </div>
           ))}
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg border border-border p-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <div className="rounded-lg bg-primary/5 p-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-primary/70">
               Área planejada
             </p>
-            <p className="text-sm font-bold mt-0.5">
+            <p className="text-sm font-bold text-foreground">
               {fmt(item.areaPlanejada)} m²
             </p>
           </div>
-          <div className="rounded-lg border border-border p-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <div className="rounded-lg bg-primary/5 p-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-primary/70">
               Volume planejado
             </p>
-            <p className="text-sm font-bold mt-0.5">
+            <p className="text-sm font-bold text-foreground">
               {fmt(item.volumePlanejado)} m³
             </p>
           </div>
         </div>
 
         {item.salvo && (
-          <div className="flex items-center justify-between rounded-lg bg-emerald-50 px-3 py-2">
+          <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
             <span className="text-xs font-semibold text-emerald-700">
-              Realizado: {item.quantidadeRealizada || "0"} m³
+              Realizado: {item.quantidadeRealizada} m³
             </span>
             <span className="text-xs font-bold text-emerald-700">
-              {item.volumePlanejado > 0 ? `${pct}%` : "—"}
+              {item.volumePlanejado > 0
+                ? `${Math.round((parseFloat(item.quantidadeRealizada) / item.volumePlanejado) * 100)}%`
+                : "—"}
             </span>
           </div>
         )}
       </div>
 
       <button
+        type="button"
         onClick={onSelecionar}
-        className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground text-sm font-semibold py-3 hover:bg-primary/90 transition-colors"
+        className="flex w-full items-center justify-center gap-2 border-t border-border bg-muted/40 py-3 text-sm font-semibold text-primary hover:bg-muted"
       >
         {item.salvo ? (
           <>
@@ -484,17 +490,13 @@ function FormRealizado({
 }) {
   const [form, setForm] = useState<ApontamentoItem>({ ...item });
 
-  const setField = <K extends keyof ApontamentoItem>(
-    k: K,
-    v: ApontamentoItem[K],
-  ) => setForm((p) => ({ ...p, [k]: v }));
+  const setField = <K extends keyof ApontamentoItem>(k: K, v: ApontamentoItem[K]) =>
+    setForm((p) => ({ ...p, [k]: v }));
 
   const updateMaterial = (id: string, patch: Partial<MaterialRealizado>) =>
     setForm((p) => ({
       ...p,
-      materiais: p.materiais.map((m) =>
-        m.id === id ? { ...m, ...patch } : m,
-      ),
+      materiais: p.materiais.map((m) => (m.id === id ? { ...m, ...patch } : m)),
     }));
 
   const addMaterial = () =>
@@ -514,20 +516,12 @@ function FormRealizado({
     }));
 
   const removeMaterial = (id: string) =>
-    setForm((p) => ({
-      ...p,
-      materiais: p.materiais.filter((m) => m.id !== id),
-    }));
+    setForm((p) => ({ ...p, materiais: p.materiais.filter((m) => m.id !== id) }));
 
-  const updateEquipamento = (
-    id: string,
-    patch: Partial<EquipamentoRealizado>,
-  ) =>
+  const updateEquipamento = (id: string, patch: Partial<EquipamentoRealizado>) =>
     setForm((p) => ({
       ...p,
-      equipamentos: p.equipamentos.map((e) =>
-        e.id === id ? { ...e, ...patch } : e,
-      ),
+      equipamentos: p.equipamentos.map((e) => (e.id === id ? { ...e, ...patch } : e)),
     }));
 
   const updateMaoObra = (id: string, patch: Partial<MaoObraRealizada>) =>
@@ -537,30 +531,30 @@ function FormRealizado({
     }));
 
   return (
-    <div className="px-4 py-6 space-y-5 max-w-2xl mx-auto pb-24">
-      <header className="flex items-center gap-3">
+    <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-5">
+      {/* Header */}
+      <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onVoltar}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border bg-card"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground">
+        <div className="flex-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-primary">
             {form.frente}
           </p>
-          <h1 className="text-base font-bold leading-tight truncate">
-            {form.descricao}
-          </h1>
+          <h1 className="text-base font-bold text-foreground">{form.descricao}</h1>
         </div>
-      </header>
+      </div>
 
       {/* Referência planejada */}
-      <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           📋 Referência do planejamento
         </p>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           {[
             { label: "Comprimento", value: `${fmt(form.comprimento)} m` },
             { label: "Largura", value: `${fmt(form.largura)} m` },
@@ -568,25 +562,27 @@ function FormRealizado({
             { label: "Densidade", value: `${fmt(form.densidade)} t/m³` },
           ].map(({ label, value }) => (
             <div key={label} className="rounded-lg bg-muted/50 p-2">
-              <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                 {label}
               </p>
-              <p className="text-xs font-semibold mt-0.5">{value}</p>
+              <p className="text-xs font-semibold text-foreground">{value}</p>
             </div>
           ))}
-          <div className="rounded-lg border border-border p-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="rounded-lg bg-primary/5 p-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-primary/70">
               Área planejada
             </p>
-            <p className="text-sm font-bold mt-0.5">
+            <p className="text-sm font-bold text-foreground">
               {fmt(form.areaPlanejada)} m²
             </p>
           </div>
-          <div className="rounded-lg border border-border p-2">
-            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <div className="rounded-lg bg-primary/5 p-2">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-primary/70">
               Volume planejado
             </p>
-            <p className="text-sm font-bold mt-0.5">
+            <p className="text-sm font-bold text-foreground">
               {fmt(form.volumePlanejado)} m³
             </p>
           </div>
@@ -594,20 +590,163 @@ function FormRealizado({
       </div>
 
       {/* Quantidade realizada */}
-      <div className="rounded-2xl border-2 border-primary/30 bg-card p-4 space-y-3">
-        <p className="text-xs font-bold uppercase tracking-wide text-primary">
-          ✏️ Quantidade realizada
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          📐 Quantidade realizada
         </p>
-        <Field label="Volume executado (m³)">
+
+        <p className="text-[11px] font-medium text-muted-foreground">
+          Parâmetros medidos em campo
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Comprimento (m)">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={form.comprimentoRealizado}
+              onChange={(e) => {
+                const v = e.target.value;
+                const c = parseFloat(v) || 0;
+                const l = parseFloat(form.larguraRealizada) || 0;
+                const esp = parseFloat(form.espessuraRealizada) || 0;
+                const area = c * l;
+                const vol = c * l * esp;
+                const peso = vol * form.densidade;
+                setForm((p) => ({
+                  ...p,
+                  comprimentoRealizado: v,
+                  areaRealizada: area,
+                  volumeRealizado: vol,
+                  pesoRealizado: peso,
+                  quantidadeRealizada: vol.toFixed(3),
+                }));
+              }}
+              placeholder="0"
+              className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </Field>
+          <Field label="Largura (m)">
+            <input
+              type="number"
+              inputMode="decimal"
+              value={form.larguraRealizada}
+              onChange={(e) => {
+                const v = e.target.value;
+                const c = parseFloat(form.comprimentoRealizado) || 0;
+                const l = parseFloat(v) || 0;
+                const esp = parseFloat(form.espessuraRealizada) || 0;
+                const area = c * l;
+                const vol = c * l * esp;
+                const peso = vol * form.densidade;
+                setForm((p) => ({
+                  ...p,
+                  larguraRealizada: v,
+                  areaRealizada: area,
+                  volumeRealizado: vol,
+                  pesoRealizado: peso,
+                  quantidadeRealizada: vol.toFixed(3),
+                }));
+              }}
+              placeholder="0"
+              className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </Field>
+        </div>
+
+        <Field label="Espessura (m)">
           <input
             type="number"
-            value={form.quantidadeRealizada}
-            onChange={(e) => setField("quantidadeRealizada", e.target.value)}
+            inputMode="decimal"
+            value={form.espessuraRealizada}
+            onChange={(e) => {
+              const v = e.target.value;
+              const c = parseFloat(form.comprimentoRealizado) || 0;
+              const l = parseFloat(form.larguraRealizada) || 0;
+              const esp = parseFloat(v) || 0;
+              const area = c * l;
+              const vol = c * l * esp;
+              const peso = vol * form.densidade;
+              setForm((p) => ({
+                ...p,
+                espessuraRealizada: v,
+                areaRealizada: area,
+                volumeRealizado: vol,
+                pesoRealizado: peso,
+                quantidadeRealizada: vol.toFixed(3),
+              }));
+            }}
             placeholder="0"
-            className="h-12 w-full rounded-xl border-2 border-primary px-3 text-base font-bold focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </Field>
-        <div className="grid grid-cols-2 gap-2">
+
+        {/* Calculados */}
+        <div className="space-y-2 rounded-xl bg-muted/50 p-3">
+          <p className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+            Calculado automaticamente · densidade planejada {fmt(form.densidade)} t/m³
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-lg bg-card p-2">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Área realizada
+              </p>
+              <p className="text-xs font-bold text-foreground">
+                {fmt(form.areaRealizada)} m²
+              </p>
+            </div>
+            <div className="rounded-lg bg-card p-2">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Volume realizado
+              </p>
+              <p className="text-xs font-bold text-foreground">
+                {fmt(form.volumeRealizado)} m³
+              </p>
+            </div>
+            <div className="rounded-lg bg-card p-2">
+              <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                Peso realizado
+              </p>
+              <p className="text-xs font-bold text-foreground">
+                {fmt(form.pesoRealizado)} t
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Aderência */}
+        {form.volumePlanejado > 0 && (
+          <div className="space-y-1.5">
+            {(() => {
+              const pct = Math.min((form.volumeRealizado / form.volumePlanejado) * 100, 100);
+              const color =
+                pct >= 90 ? "text-emerald-700" : pct >= 60 ? "text-amber-700" : "text-red-700";
+              const barColor =
+                pct >= 90 ? "bg-emerald-500" : pct >= 60 ? "bg-amber-500" : "bg-red-500";
+              return (
+                <>
+                  <div className="flex items-center justify-between text-xs font-semibold">
+                    <span className={color}>Aderência ao planejamento</span>
+                    <span className={color}>{pct.toFixed(1)}%</span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className={`h-full ${barColor} transition-all`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Volume: {fmt(form.volumeRealizado)} m³ de {fmt(form.volumePlanejado)} m³ planejados
+                  </p>
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Estacas */}
+        <div className="grid grid-cols-2 gap-3">
           <Field label="Estaca inicial">
             <input
               type="text"
@@ -630,13 +769,13 @@ function FormRealizado({
       </div>
 
       {/* Materiais */}
-      <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           📦 Material utilizado
         </p>
 
         {form.materiais.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-2">
+          <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-xs text-muted-foreground">
             Nenhum material adicionado.
           </p>
         )}
@@ -653,34 +792,30 @@ function FormRealizado({
         <button
           type="button"
           onClick={addMaterial}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-3 text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-3 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
         >
           <Plus className="h-4 w-4" /> Adicionar material
         </button>
       </div>
 
       {/* Equipamentos */}
-      <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           🏗️ Equipamentos
         </p>
         {form.equipamentos.map((eq) => (
-          <div
-            key={eq.id}
-            className="rounded-xl border border-border p-3 space-y-2"
-          >
-            <p className="text-xs font-semibold">
+          <div key={eq.id} className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+            <p className="text-xs font-semibold text-foreground">
               {eq.prefixo} — {eq.descricao}
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Horímetro inicial">
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={eq.horimetroInicial}
                   onChange={(e) =>
-                    updateEquipamento(eq.id, {
-                      horimetroInicial: e.target.value,
-                    })
+                    updateEquipamento(eq.id, { horimetroInicial: e.target.value })
                   }
                   placeholder="0"
                   className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -689,11 +824,10 @@ function FormRealizado({
               <Field label="Horímetro final">
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={eq.horimetroFinal}
                   onChange={(e) =>
-                    updateEquipamento(eq.id, {
-                      horimetroFinal: e.target.value,
-                    })
+                    updateEquipamento(eq.id, { horimetroFinal: e.target.value })
                   }
                   placeholder="0"
                   className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
@@ -703,25 +837,22 @@ function FormRealizado({
           </div>
         ))}
         {form.equipamentos.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-2">
+          <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-xs text-muted-foreground">
             Nenhum equipamento cadastrado.
           </p>
         )}
       </div>
 
-      {/* Mão de Obra */}
-      <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+      {/* Mão de obra */}
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           👷 Mão de obra
         </p>
         {form.maoObra.map((mo) => (
-          <div
-            key={mo.id}
-            className="rounded-xl border border-border p-3 space-y-2"
-          >
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold">{mo.funcao}</p>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase tracking-wide">
+          <div key={mo.id} className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-foreground">{mo.funcao}</p>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
                 {mo.categoria}
               </span>
             </div>
@@ -729,6 +860,7 @@ function FormRealizado({
               <Field label="Horas normais">
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={mo.horasNormais}
                   onChange={(e) =>
                     updateMaoObra(mo.id, { horasNormais: e.target.value })
@@ -740,6 +872,7 @@ function FormRealizado({
               <Field label="Horas extras">
                 <input
                   type="number"
+                  inputMode="decimal"
                   value={mo.horasExtras}
                   onChange={(e) =>
                     updateMaoObra(mo.id, { horasExtras: e.target.value })
@@ -752,15 +885,16 @@ function FormRealizado({
           </div>
         ))}
         {form.maoObra.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-2">
+          <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-xs text-muted-foreground">
             Nenhuma função cadastrada.
           </p>
         )}
       </div>
 
       <button
+        type="button"
         onClick={() => onSalvar(form)}
-        className="h-14 w-full rounded-2xl bg-primary text-primary-foreground text-base font-bold flex items-center justify-center gap-2 shadow-md"
+        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-md"
       >
         <CheckCircle2 className="h-5 w-5" /> Salvar apontamento
       </button>
@@ -769,7 +903,7 @@ function FormRealizado({
 }
 
 // ---------------------------------------------------------------------------
-// Card de material com frete
+// MaterialCard
 // ---------------------------------------------------------------------------
 function MaterialCard({
   material,
@@ -786,30 +920,22 @@ function MaterialCard({
     onChange({
       cargas: [
         ...material.cargas,
-        {
-          id: uid(),
-          placa: "",
-          horaDescarga: "",
-          quantidade: "",
-          fotoUrl: null,
-        },
+        { id: uid(), placa: "", horaDescarga: "", quantidade: "", fotoUrl: null },
       ],
     });
 
   const updateCarga = (id: string, patch: Partial<Carga>) =>
     onChange({
-      cargas: material.cargas.map((c) =>
-        c.id === id ? { ...c, ...patch } : c,
-      ),
+      cargas: material.cargas.map((c) => (c.id === id ? { ...c, ...patch } : c)),
     });
 
   const removeCarga = (id: string) =>
     onChange({ cargas: material.cargas.filter((c) => c.id !== id) });
 
   return (
-    <div className="rounded-xl border border-border bg-background overflow-hidden">
-      <div className="p-3 space-y-3">
-        <div className="grid grid-cols-[1fr_80px_auto] gap-2 items-end">
+    <div className="overflow-hidden rounded-xl border border-border bg-background">
+      <div className="space-y-3 p-3">
+        <div className="grid grid-cols-[1fr_80px_auto] gap-2">
           <Field label="Material">
             <input
               type="text"
@@ -819,7 +945,7 @@ function MaterialCard({
               className="h-10 w-full rounded-lg border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </Field>
-          <Field label="Unid.">
+          <Field label="Unidade">
             <input
               type="text"
               value={material.unidade}
@@ -828,33 +954,36 @@ function MaterialCard({
               className="h-10 w-full rounded-lg border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </Field>
-          <button
-            type="button"
-            onClick={onRemove}
-            className="grid h-10 w-10 place-items-center rounded-lg border border-border text-muted-foreground hover:text-destructive hover:border-destructive"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-end">
+            <button
+              type="button"
+              onClick={onRemove}
+              className="grid h-10 w-10 place-items-center rounded-lg border border-border text-muted-foreground hover:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
 
         {material.freteAtivo ? (
-          <div className="flex items-center justify-between rounded-lg bg-indigo-50 p-2.5">
+          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/40 p-3">
             <div>
-              <p className="text-[11px] font-semibold text-indigo-900">
+              <p className="text-[11px] font-semibold text-foreground">
                 Quantidade utilizada ({material.unidade || "—"})
               </p>
-              <p className="text-[10px] text-indigo-700">
+              <p className="text-[10px] text-muted-foreground">
                 Somado automaticamente pelo frete
               </p>
             </div>
-            <span className="text-sm font-bold text-indigo-900">
+            <span className="text-sm font-bold text-foreground">
               {totalFrete > 0 ? totalFrete.toFixed(2) : "0"} {material.unidade}
             </span>
           </div>
         ) : (
-          <Field label={`Quantidade (${material.unidade || "—"})`}>
+          <Field label={`Quantidade utilizada ${material.unidade ? `(${material.unidade})` : ""}`}>
             <input
               type="number"
+              inputMode="decimal"
               value={material.quantidadeManual}
               onChange={(e) => onChange({ quantidadeManual: e.target.value })}
               placeholder="0"
@@ -868,32 +997,28 @@ function MaterialCard({
       <button
         type="button"
         onClick={() => onChange({ freteAtivo: !material.freteAtivo })}
-        className="w-full flex items-center justify-between px-3 py-2.5 bg-muted border-t border-border"
+        className="flex w-full items-center justify-between border-t border-border bg-muted px-3 py-2.5"
       >
-        <span className="flex items-center gap-2 text-xs font-semibold">
+        <span className="flex items-center gap-2 text-xs font-semibold text-foreground">
           <Truck className="h-4 w-4 text-indigo-600" />
           Apontar frete
-          <span className="text-[10px] text-muted-foreground font-normal">
+          <span className="rounded-full bg-background px-1.5 py-0.5 text-[10px] font-normal text-muted-foreground">
             Opcional
           </span>
         </span>
-        <span
-          className={`relative inline-block h-5 w-9 rounded-full transition-colors ${
-            material.freteAtivo ? "bg-indigo-600" : "bg-border"
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-              material.freteAtivo ? "translate-x-4" : "translate-x-0.5"
-            }`}
-          />
+        <span className="text-muted-foreground">
+          {material.freteAtivo ? (
+            <ChevronUp className="h-4 w-4" />
+          ) : (
+            <ChevronDown className="h-4 w-4" />
+          )}
         </span>
       </button>
 
       {/* Cargas */}
       {material.freteAtivo && (
-        <div className="p-3 space-y-2 bg-indigo-50/40 border-t border-border">
-          <p className="text-[11px] font-semibold text-indigo-900">
+        <div className="space-y-2 border-t border-border bg-muted/30 p-3">
+          <p className="text-[11px] font-medium text-muted-foreground">
             {material.cargas.length} carga(s) · Total:{" "}
             {totalFrete > 0 ? totalFrete.toFixed(2) : "0"} {material.unidade}
           </p>
@@ -912,9 +1037,9 @@ function MaterialCard({
           <button
             type="button"
             onClick={addCarga}
-            className="w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-indigo-300 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-indigo-300 bg-indigo-50 py-2 text-xs font-semibold text-indigo-700 hover:bg-indigo-100"
           >
-            <Plus className="h-4 w-4" /> Adicionar carga
+            <Plus className="h-3.5 w-3.5" /> Adicionar carga
           </button>
         </div>
       )}
@@ -923,7 +1048,7 @@ function MaterialCard({
 }
 
 // ---------------------------------------------------------------------------
-// Card de carga individual
+// CargaCard
 // ---------------------------------------------------------------------------
 function CargaCard({
   carga,
@@ -938,7 +1063,7 @@ function CargaCard({
   onChange: (patch: Partial<Carga>) => void;
   onRemove: () => void;
 }) {
-  const fileRef = useRef<HTMLInputElement | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -948,31 +1073,29 @@ function CargaCard({
   };
 
   return (
-    <div className="rounded-lg border border-indigo-200 bg-white p-2.5 space-y-2">
+    <div className="space-y-2 rounded-lg border border-border bg-card p-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-bold text-indigo-900">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-indigo-700">
           Carga {numero}
         </span>
         <button
           type="button"
           onClick={onRemove}
-          className="grid h-7 w-7 place-items-center rounded-md text-muted-foreground hover:text-destructive"
+          className="grid h-6 w-6 place-items-center rounded text-muted-foreground hover:text-red-600"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-2">
         <Field label="Placa">
           <input
             type="text"
             value={carga.placa}
-            onChange={(e) =>
-              onChange({ placa: e.target.value.toUpperCase() })
-            }
+            onChange={(e) => onChange({ placa: e.target.value.toUpperCase() })}
             placeholder="ABC1D23"
             maxLength={8}
-            className="h-10 w-full rounded-lg border border-input px-2 text-xs uppercase font-mono focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            className="h-10 w-full rounded-lg border border-input px-2 text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-indigo-400"
           />
         </Field>
         <Field label="Hora">
@@ -983,9 +1106,10 @@ function CargaCard({
             className="h-10 w-full rounded-lg border border-input px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400"
           />
         </Field>
-        <Field label={`Qtd ${unidade || ""}`}>
+        <Field label={`Qtd ${unidade ? `(${unidade})` : ""}`}>
           <input
             type="number"
+            inputMode="decimal"
             value={carga.quantidade}
             onChange={(e) => onChange({ quantidade: e.target.value })}
             placeholder="0"
@@ -1004,17 +1128,15 @@ function CargaCard({
       />
 
       {carga.fotoUrl ? (
-        <div className="flex items-center gap-2 rounded-lg border border-indigo-200 p-2 bg-indigo-50">
+        <div className="flex items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 p-2">
           <img
             src={carga.fotoUrl}
             alt={`Ticket carga ${numero}`}
-            className="h-10 w-10 rounded-md object-cover"
+            className="h-10 w-10 shrink-0 rounded object-cover"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold text-indigo-900">
-              Foto do ticket
-            </p>
-            <p className="text-[10px] text-indigo-700">Toque para substituir</p>
+            <p className="text-[11px] font-semibold text-indigo-700">Foto do ticket</p>
+            <p className="text-[10px] text-indigo-600/80">Toque para substituir</p>
           </div>
           <button
             type="button"
@@ -1028,18 +1150,14 @@ function CargaCard({
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          className="w-full flex items-center gap-3 rounded-lg border border-dashed border-indigo-300 p-2.5 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+          className="flex w-full items-center gap-3 rounded-lg border border-dashed border-indigo-300 bg-indigo-50 p-2.5 transition-colors hover:bg-indigo-100"
         >
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-indigo-100 text-indigo-600">
+          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-indigo-100 text-indigo-600">
             <Camera className="h-4 w-4" />
           </div>
           <div className="flex-1 text-left">
-            <p className="text-[11px] font-semibold text-indigo-900">
-              Tirar foto do ticket
-            </p>
-            <p className="text-[10px] text-indigo-700">
-              Opcional · 1 foto por carga
-            </p>
+            <p className="text-[11px] font-semibold text-indigo-700">Tirar foto do ticket</p>
+            <p className="text-[10px] text-indigo-600/80">Opcional · 1 foto por carga</p>
           </div>
         </button>
       )}
@@ -1048,10 +1166,12 @@ function CargaCard({
 }
 
 // ---------------------------------------------------------------------------
-// Formulário avulso
+// FormAvulso
 // ---------------------------------------------------------------------------
 function FormAvulso({
   frentes,
+  equipamentos,
+  maoObra,
   onVoltar,
   onSalvar,
 }: {
@@ -1086,28 +1206,27 @@ function FormAvulso({
     setMateriais((p) => p.filter((m) => m.id !== id));
 
   return (
-    <div className="px-4 py-6 space-y-5 max-w-2xl mx-auto pb-24">
-      <header className="flex items-center gap-3">
+    <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-5">
+      <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={onVoltar}
           className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border bg-card"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <div className="min-w-0">
-          <h1 className="text-base font-bold leading-tight">
-            Apontamento avulso
-          </h1>
+        <div className="flex-1">
+          <h1 className="text-lg font-bold text-foreground">Apontamento avulso</h1>
           <p className="text-xs text-muted-foreground">Serviço não planejado</p>
         </div>
-      </header>
+      </div>
 
-      <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <Field label="Frente">
           <select
             value={frenteNome}
             onChange={(e) => setFrenteNome(e.target.value)}
-            className="h-11 w-full rounded-xl border border-input px-3 text-sm bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           >
             <option value="">Selecionar frente</option>
             {frentes.map((f) => (
@@ -1123,12 +1242,13 @@ function FormAvulso({
             onChange={(e) => setDescricao(e.target.value)}
             placeholder="Descreva o serviço realizado..."
             rows={3}
-            className="w-full rounded-xl border border-input px-3 py-2 text-sm bg-background resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </Field>
         <Field label="Quantidade realizada">
           <input
             type="number"
+            inputMode="decimal"
             value={quantidade}
             onChange={(e) => setQuantidade(e.target.value)}
             placeholder="0"
@@ -1137,7 +1257,7 @@ function FormAvulso({
         </Field>
       </div>
 
-      <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+      <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           📦 Material utilizado
         </p>
@@ -1152,15 +1272,16 @@ function FormAvulso({
         <button
           type="button"
           onClick={addMaterial}
-          className="w-full flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-3 text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-3 text-sm font-semibold text-muted-foreground transition-colors hover:border-primary hover:text-primary"
         >
           <Plus className="h-4 w-4" /> Adicionar material
         </button>
       </div>
 
       <button
+        type="button"
         onClick={onSalvar}
-        className="h-14 w-full rounded-2xl bg-primary text-primary-foreground text-base font-bold flex items-center justify-center gap-2 shadow-md"
+        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-primary-foreground shadow-md"
       >
         <CheckCircle2 className="h-5 w-5" /> Salvar apontamento
       </button>
@@ -1171,22 +1292,11 @@ function FormAvulso({
 // ---------------------------------------------------------------------------
 // Utilitário
 // ---------------------------------------------------------------------------
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1">
-      <label className="text-xs font-semibold text-muted-foreground">
-        {label}
-      </label>
+      <label className="text-xs font-semibold text-muted-foreground">{label}</label>
       {children}
     </div>
   );
 }
-
-// Suprimir aviso de import não usado: ChevronDown reservado para evoluções
-void ChevronDown;
