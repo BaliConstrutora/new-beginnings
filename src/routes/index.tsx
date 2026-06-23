@@ -16,11 +16,11 @@ import { ROLES, type Role, getRole, setRole } from "@/lib/auth-store";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Bora Bora — Gestão de Custos e Apropriação" },
+      { title: "Bora Bora — Gestão de Produção" },
       {
         name: "description",
         content:
-          "Selecione perfil e obra para acessar o sistema Bora Bora de Gestão de Custos e Apropriação.",
+          "Selecione perfil e obra para acessar o sistema Bora Bora de Gestão de Produção.",
       },
     ],
   }),
@@ -29,8 +29,8 @@ export const Route = createFileRoute("/")({
 
 function EntryScreen() {
   const navigate = useNavigate();
-  const [obra, setObraVal] = useState<string>("");
-  const [role, setRoleVal] = useState<Role | "">("");
+  const [obra, setObraVal] = useState("");
+  const [role, setRoleVal] = useState<"" | Role>("");
 
   useEffect(() => {
     const o = getObra();
@@ -42,30 +42,26 @@ function EntryScreen() {
   const handleEnter = () => {
     if (!obra || !role) return;
     setObra(obra);
-    setRole(role);
+    setRole(role as Role);
     navigate({ to: "/dashboard" });
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-3rem)] flex-col justify-between gap-6 pb-4">
-      <div className="flex flex-col items-center pt-8 text-center">
-        <div className="grid h-20 w-20 place-items-center rounded-3xl bg-primary text-primary-foreground shadow-lg">
-          <HardHat className="h-10 w-10" />
+    <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center gap-6 px-4 py-8">
+      <div className="flex flex-col items-center text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+          <HardHat size={28} />
         </div>
-        <h1 className="mt-5 text-4xl font-black tracking-tight text-foreground">
-          Bora Bora
-        </h1>
-        <p className="mt-2 text-sm font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Gestão de Custos e Apropriação
-        </p>
+        <h1 className="mt-4 text-3xl font-bold text-foreground">Bora Bora</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Gestão de Produção</p>
       </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2 rounded-2xl border-2 border-border bg-card p-5 shadow-sm">
-          <Label className="text-sm font-bold uppercase tracking-wider">
+      <div className="space-y-6 rounded-2xl border border-border bg-card p-5">
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Perfil de Acesso
           </Label>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {ROLES.map((r) => {
               const Icon = r.value === "sede" ? ShieldCheck : HardHatIcon;
               const active = role === r.value;
@@ -81,17 +77,21 @@ function EntryScreen() {
                   }`}
                 >
                   <div
-                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
                       active
                         ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground"
+                        : "bg-muted text-foreground"
                     }`}
                   >
-                    <Icon className="h-5 w-5" />
+                    <Icon size={18} />
                   </div>
-                  <div className="min-w-0">
-                    <p className="font-bold text-sm">{r.label}</p>
-                    <p className="text-xs text-muted-foreground">{r.desc}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      {r.label}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {r.desc}
+                    </p>
                   </div>
                 </button>
               );
@@ -99,30 +99,32 @@ function EntryScreen() {
           </div>
         </div>
 
-        <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-5 shadow-sm">
-          <Label htmlFor="obra" className="text-sm font-bold uppercase tracking-wider">
+        <div className="space-y-2">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Obra Atual
           </Label>
           <Select value={obra} onValueChange={setObraVal}>
-            <SelectTrigger id="obra" className="h-14 text-base">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Selecione a obra" />
             </SelectTrigger>
             <SelectContent>
               {OBRAS.map((o) => (
-                <SelectItem key={o.value} value={o.value} className="text-base">
+                <SelectItem key={o.value} value={o.value}>
                   {o.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Button
-            onClick={handleEnter}
-            disabled={!obra || !role}
-            className="mt-2 h-14 w-full text-base font-bold shadow-md"
-          >
-            Entrar
-          </Button>
         </div>
+
+        <Button
+          onClick={handleEnter}
+          disabled={!obra || !role}
+          className="w-full"
+          size="lg"
+        >
+          Entrar
+        </Button>
       </div>
 
       <p className="text-center text-xs text-muted-foreground">
