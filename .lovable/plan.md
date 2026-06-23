@@ -1,25 +1,22 @@
-## Reconstruir `src/routes/dashboard.tsx`
+## Reconstruir `src/routes/index.tsx`
 
-O JSX colado está achatado. Vou reconstruir o arquivo mantendo toda a lógica e corrigindo, no mesmo passo, o erro de hidratação visível no preview (a data renderizada no servidor difere da data no cliente).
+O JSX colado está achatado. Vou reconstruir mantendo lógica, tipagem e a `Route` (com `head`/meta) intactas.
 
 ### Preservar
-- Imports, definição da `Route` (com `head`/meta).
-- Hooks `useObra`, `useHydrated`, `usePlanejamento`, `useApontamento`.
-- Redirect via `useEffect` quando não há obra.
-- Cálculo de `aderencia` com `useMemo` e `calcularAderencia`.
-
-### Corrigir hidratação
-O servidor pré-renderiza `new Date()` em outro fuso/dia e o cliente renderiza o dia atual, gerando mismatch (`segunda-feira, 22 de junho` vs `terça-feira, 23 de junho`). Solução: só exibir a string de data depois de `hydrated` (renderizar um placeholder vazio/invisível no SSR), seguindo o mesmo padrão já usado pelo `AppHeader`.
+- Imports e definição da `Route` com `meta` (title/description).
+- Estado local `obra` e `role` + hidratação via `useEffect` lendo `getObra()` / `getRole()`.
+- `handleEnter`: persiste obra/role e navega para `/dashboard` (com `setRole(role as Role)` para satisfazer o tipo).
 
 ### Reconstruir JSX
-- **Header**: kicker "Resumo do dia", `<h1>Dashboard</h1>`, parágrafo com a data formatada em pt-BR (capitalizada, só após hidratar).
-- **`AderenciaCard`**: card colorido por faixa (>=90 verde, >=60 âmbar, senão vermelho; cinza quando `pct === null`), com ícone `Target`, título, valor `{pct}%` ou mensagem de fallback, e barra de progresso.
-- **Ações rápidas**: seção com dois `<Link>` em formato de card:
-  1. **Novo Apontamento** → `/apontamento`, ícone `ClipboardList`.
-  2. **Planejamento** → `/planejamento`, ícone `CalendarRange`, com contagem `plano.servicos.length` ou "Nenhum planejamento para hoje".
+- **Cabeçalho da tela**: bloco centralizado com ícone `HardHat` em um quadrado arredondado `bg-primary`, título "Bora Bora" e subtítulo "Gestão de Produção".
+- **Card principal** (`rounded-2xl border bg-card p-5 space-y-6`):
+  1. **Perfil de Acesso**: `<Label>` + grid de 2 botões a partir de `ROLES.map`. Cada botão usa `ShieldCheck` para `sede` e `HardHatIcon` para os demais, destaca o ativo com `border-primary bg-primary/10`, e mostra `r.label` + `r.desc`.
+  2. **Obra Atual**: `<Label>` + `<Select value={obra} onValueChange={setObraVal}>` com `SelectTrigger`/`SelectValue placeholder="Selecione a obra"` e `SelectItem` para cada `OBRAS`.
+  3. **Botão `<Button>` Entrar**: full-width, `disabled={!obra || !role}`, chama `handleEnter`.
+- **Rodapé**: `© {new Date().getFullYear()} Bora Bora · Uso em campo` em texto pequeno e silenciado.
 
 ### Estilo
-Apenas tokens semânticos (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary`, etc.) — exceto as cores semafóricas de aderência (emerald/amber/red), que já estavam no código original e são intencionais para sinalização.
+Apenas tokens semânticos (`bg-background`, `bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`). Layout mobile-first centralizado verticalmente com `max-w-md` e `min-h-[calc(100vh-…)]` adequado ao header existente.
 
 ### Fora de escopo
-Nenhuma mudança em stores, rotas ou outros componentes.
+Nenhuma mudança em stores, rotas ou componentes UI.
