@@ -1,27 +1,25 @@
-## Reconstruir `src/components/AppHeader.tsx`
+## Reconstruir `src/routes/dashboard.tsx`
 
-O conteúdo colado perdeu a estrutura JSX (tags achatadas em linhas em branco). Vou reconstruir o componente preservando 100% da lógica já existente.
+O JSX colado está achatado. Vou reconstruir o arquivo mantendo toda a lógica e corrigindo, no mesmo passo, o erro de hidratação visível no preview (a data renderizada no servidor difere da data no cliente).
 
-### Preservar (sem alterações)
-- Imports: `Link, useNavigate, useRouterState` de `@tanstack/react-router`, `useEffect/useState`, ícones `HardHat` e `ChevronDown`, e `useObra, obraLabel, clearObra` de `@/lib/obra-store`.
-- Hooks: `pathname`, `obra`, `navigate`, `mounted` (hydration guard).
-- Guard `if (pathname === "/") return null;`.
-- `handleSwitch`: limpa a obra e navega para `/`.
+### Preservar
+- Imports, definição da `Route` (com `head`/meta).
+- Hooks `useObra`, `useHydrated`, `usePlanejamento`, `useApontamento`.
+- Redirect via `useEffect` quando não há obra.
+- Cálculo de `aderencia` com `useMemo` e `calcularAderencia`.
+
+### Corrigir hidratação
+O servidor pré-renderiza `new Date()` em outro fuso/dia e o cliente renderiza o dia atual, gerando mismatch (`segunda-feira, 22 de junho` vs `terça-feira, 23 de junho`). Solução: só exibir a string de data depois de `hydrated` (renderizar um placeholder vazio/invisível no SSR), seguindo o mesmo padrão já usado pelo `AppHeader`.
 
 ### Reconstruir JSX
-Header sticky no topo com duas áreas:
-
-1. **Branding (esquerda)** — `<Link to="/">`:
-   - Ícone `HardHat` dentro de um quadrado arredondado com fundo `bg-primary` e texto `text-primary-foreground`.
-   - Título "Bora Bora" (font-bold) e subtítulo "Gestão de Produção" (text-xs, muted).
-
-2. **Seletor de obra (direita)** — `<button onClick={handleSwitch}>`:
-   - Label dinâmico: `mounted ? obraLabel(obra) || "Selecionar obra" : "Selecionar obra"`.
-   - Ícone `ChevronDown` à direita.
-   - Estilo de chip arredondado com borda e hover.
+- **Header**: kicker "Resumo do dia", `<h1>Dashboard</h1>`, parágrafo com a data formatada em pt-BR (capitalizada, só após hidratar).
+- **`AderenciaCard`**: card colorido por faixa (>=90 verde, >=60 âmbar, senão vermelho; cinza quando `pct === null`), com ícone `Target`, título, valor `{pct}%` ou mensagem de fallback, e barra de progresso.
+- **Ações rápidas**: seção com dois `<Link>` em formato de card:
+  1. **Novo Apontamento** → `/apontamento`, ícone `ClipboardList`.
+  2. **Planejamento** → `/planejamento`, ícone `CalendarRange`, com contagem `plano.servicos.length` ou "Nenhum planejamento para hoje".
 
 ### Estilo
-Usar exclusivamente tokens semânticos do design system (`bg-background`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`) — nada de cores hardcoded — para respeitar o tema do projeto.
+Apenas tokens semânticos (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary`, etc.) — exceto as cores semafóricas de aderência (emerald/amber/red), que já estavam no código original e são intencionais para sinalização.
 
 ### Fora de escopo
-Nenhuma mudança em lógica, stores, rotas ou outros arquivos.
+Nenhuma mudança em stores, rotas ou outros componentes.
