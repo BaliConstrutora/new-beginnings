@@ -18,29 +18,29 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b-2 border-border bg-sidebar text-sidebar-foreground">
-      <div className="mx-auto flex max-w-screen-sm items-center justify-between gap-3 px-4 py-3">
-        <Link to="/dashboard" className="flex items-center gap-2.5 min-w-0">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <HardHat className="h-5 w-5" />
+    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
+        <Link to="/" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <HardHat size={18} />
           </div>
-          <div className="min-w-0">
-            <p className="text-base font-black leading-tight">Bora Bora</p>
-            <p className="text-[10px] font-semibold uppercase leading-tight tracking-wider text-sidebar-foreground/70">
-              Custos & Apropriação
-            </p>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-bold text-foreground">Bora Bora</span>
+            <span className="text-xs text-muted-foreground">
+              Gestão de Produção
+            </span>
           </div>
         </Link>
+
         <button
           type="button"
           onClick={handleSwitch}
-          className="flex max-w-[45%] items-center gap-1.5 rounded-lg border border-sidebar-foreground/20 bg-sidebar-foreground/5 px-2.5 py-1.5 text-xs font-bold transition-colors hover:bg-sidebar-foreground/10"
-          aria-label="Trocar obra"
+          className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
         >
-          <span className="truncate" suppressHydrationWarning>
+          <span className="max-w-[140px] truncate">
             {mounted ? obraLabel(obra) || "Selecionar obra" : "Selecionar obra"}
           </span>
-          <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+          <ChevronDown size={14} className="text-muted-foreground" />
         </button>
       </div>
     </header>
