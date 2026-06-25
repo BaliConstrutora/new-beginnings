@@ -1,42 +1,29 @@
-# Plan: Refactor `/cadastros` to a step-based, polished layout
+# Plan: Rewrite entry screen with CC → Obra auto-selection
 
-Rewrite `src/routes/cadastros.tsx` matching the structure implied by the pasted skeleton (numbered step cards, divider, shared list components). Keep all existing CRUD logic intact; only the JSX/layout and a couple of helpers change.
+Replace `src/routes/index.tsx` with the new flow: user picks a **Centro de Custo**, the linked **Obra** appears automatically (1 obra per CC).
 
 ## Structure
 
-- **Route + `CadastrosPage`**: restore `useNavigate` + `useObra` + `useHydrated` redirect to `/` when no obra is selected. (Note: this re-introduces the "can't reach cadastros from `/` without obra" issue — see Open question.) Header (h1 + subtitle) + `Tabs` with 5 triggers: `Obras` (default), `Equip.`, `M.Obra`, `Frente`, `Param.`. Each trigger shows its icon + label.
+- Imports: `useCentrosCusto`, `useObras`, `getObra`, `setObra`, `obraParaCC` from `@/lib/obra-store`; `ROLES`, `Role`, `getRole`, `setRole` from `@/lib/auth-store`; `CheckCircle2` added to lucide imports.
+- State: `ccId` (string), `role` (`"" | Role`). Derived: `obraVinculada = ccId ? obraParaCC(ccId) : null`, `ccSelecionado`, `podeEntrar`.
+- `useEffect([obras])`: restores prior selection — `getObra()` → find obra in `obras` → set `ccId` to its `centroCustoId`; restores `role` via `getRole()`.
+- `handleEnter`: guards on `obraVinculada && role`, then `setObra(obraVinculada.id)`, `setRole(role)`, navigate to `/dashboard`.
 
-- **`ObrasTab`** (the main visual change):
-  - **Passo 1 — Centro de Custo** card:
-    - Numbered badge `1` + section title.
-    - Form: `Código` (uppercased on change), `Nome descritivo`, button "Salvar Centro de Custo". Toasts on validation/success via `addCentroCusto`.
-    - `ListSection` of CCs. Each row uses `ListItem` with `title=cc.codigo`, `subtitle=cc.nome`, optional `badge` showing the linked obra name from `obraParaCC(cc.id)` (or "Sem obra"), and `onRemove` calling `removeCentroCusto` with a toast warning that the linked obra is also removed.
-  - **Divisor** (centered horizontal line + chevron / label).
-  - **Passo 2 — Obra** card:
-    - Numbered badge `2` + section title.
-    - `Centro de Custo` `Select` (disabled-state copy when `centrosCusto.length === 0`: "Cadastre um centro de custo no passo 1 primeiro.").
-    - `Nome da Obra` input, disabled until a CC is picked.
-    - Button "Salvar Obra" calling `addObra`.
-    - `ListSection` of obras. Each `ListItem` shows `title=obra.nome`, `subtitle=cc.codigo — cc.nome`, `onRemove=removeObra`.
+## JSX layout (centered card, max-w-md)
 
-- **`FrentesTab`, `EquipamentosTab`, `MaoObraTab`, `ParametrosTab`**: keep current behavior; just route their lists through the shared `ListSection` / `ListItem` so visuals match the new Obras tab.
-
-- **Shared `ListSection` / `ListItem`** (extracted):
-  - `ListSection({ title, empty, children })`: uppercase muted title; renders `<ul>` of children or an empty-state card with `empty` text.
-  - `ListItem({ title, subtitle, badge?, onRemove })`: row with title + optional badge pill + subtitle, plus a destructive trash button.
+1. **Header**: `HardHat` in `bg-primary` rounded square, "Bora Bora" title, "Gestão de Produção" subtitle.
+2. **Card** (`rounded-2xl border bg-card p-5`) with three blocks:
+   - **Perfil de Acesso**: `ROLES.map` grid of 2 buttons (ShieldCheck for `sede`, HardHatIcon for others), active state `border-primary bg-primary/10`.
+   - **Centro de Custo**: empty-state card with link to `/cadastros` when `centrosCusto.length === 0`; otherwise a `<Select>` listing `cc.codigo` (bold) + `cc.nome` (muted).
+   - **Obra (conditional on `ccId`)**: when `obraVinculada` exists, a success row with `CheckCircle2` icon, obra name, and `ccSelecionado` codigo/nome subtitle (green/emerald accent or `bg-primary/5`). When not, an empty-state card pointing to Cadastros.
+   - **Entrar** button: `disabled={!podeEntrar}`, full-width, `size="lg"`.
+3. **Footer**: `© {year} Bora Bora · Uso em campo`.
 
 ## Styling
 
-Use existing semantic tokens only (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`, `text-destructive`). Step badges use `bg-primary text-primary-foreground` rounded-full. Form cards use `rounded-2xl border-2 border-border bg-card p-4`.
+Semantic tokens only (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`, `bg-primary/10`). Success state on Obra block uses `border-emerald-500/40 bg-emerald-500/10` with `text-emerald-700 dark:text-emerald-400` for the check icon, matching the dashboard's adherence palette.
 
 ## Out of scope
 
-- No changes to `obra-store.ts`, `cadastros-store.ts`, `parametros-store.ts`, or any other route.
-- No data migration.
-
-## Open question (blocking the redirect choice)
-
-Re-adding the `if (!obra) navigate("/")` guard in `CadastrosPage` will trap new users: the entry screen shows a link to `/cadastros` when no obras exist, but the guard bounces them back. Two options — I'll use **A** unless you say otherwise:
-
-- **A (default)**: Keep `/cadastros` accessible without a selected obra (no guard), so first-time setup works. Drop `useNavigate`/`useObra`/`useHydrated` from the page wrapper.
-- **B**: Keep the guard as in your paste, and instead change the entry screen's empty-state to surface CC/Obra creation inline (no navigation needed).
+- No changes to stores, AppHeader, or other routes.
+- No backend wiring.
