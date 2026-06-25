@@ -55,12 +55,14 @@ export const Route = createFileRoute("/cadastros")({
 });
 
 function CadastrosPage() {
-  const navigate = useNavigate();
-  const obra = useObra();
-  const hydrated = useHydrated();
-  useEffect(() => {
-    if (hydrated && !obra) navigate({ to: "/" });
-  }, [hydrated, obra, navigate]);
+  return (
+    <div className="space-y-5 pb-4">
+      <header>
+        <h1 className="text-2xl font-bold">Cadastros e Configurações</h1>
+        <p className="text-sm text-muted-foreground">
+          Recursos e parâmetros da obra.
+        </p>
+      </header>
 
   return (
     <div className="space-y-5 pb-4">
