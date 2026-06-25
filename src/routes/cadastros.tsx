@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Trash2, Wrench, Users, Settings2, Map, Building2 } from "lucide-react";
@@ -25,8 +25,6 @@ import {
   useFrentes,
 } from "@/lib/cadastros-store";
 import {
-  useObra,
-  useHydrated,
   useCentrosCusto,
   useObras,
   addCentroCusto,
