@@ -64,14 +64,6 @@ function CadastrosPage() {
         </p>
       </header>
 
-  return (
-    <div className="space-y-5 pb-4">
-      <header>
-        <h1 className="text-2xl font-bold">Cadastros e Configurações</h1>
-        <p className="text-sm text-muted-foreground">
-          Recursos e parâmetros da obra.
-        </p>
-      </header>
 
       <Tabs defaultValue="obras" className="w-full">
         <TabsList className="grid w-full grid-cols-5 h-12">
