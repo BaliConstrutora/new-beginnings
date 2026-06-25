@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { HardHat, ShieldCheck, HardHat as HardHatIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { OBRAS, getObra, setObra } from "@/lib/obra-store";
+import {
+  getObra,
+  setObra,
+  useObras,
+  useCentrosCusto,
+  useHydrated,
+} from "@/lib/obra-store";
 import { ROLES, type Role, getRole, setRole } from "@/lib/auth-store";
 
 export const Route = createFileRoute("/")({
@@ -29,6 +35,9 @@ export const Route = createFileRoute("/")({
 
 function EntryScreen() {
   const navigate = useNavigate();
+  const hydrated = useHydrated();
+  const obras = useObras();
+  const centros = useCentrosCusto();
   const [obra, setObraVal] = useState("");
   const [role, setRoleVal] = useState<"" | Role>("");
 
@@ -45,6 +54,8 @@ function EntryScreen() {
     setRole(role as Role);
     navigate({ to: "/dashboard" });
   };
+
+  const ccById = (id: string) => centros.find((c) => c.id === id);
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-md flex-col justify-center gap-6 px-4 py-8">
@@ -103,23 +114,40 @@ function EntryScreen() {
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Obra Atual
           </Label>
-          <Select value={obra} onValueChange={setObraVal}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Selecione a obra" />
-            </SelectTrigger>
-            <SelectContent>
-              {OBRAS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>
-                  {o.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {hydrated && obras.length === 0 ? (
+            <div className="rounded-xl border-2 border-dashed border-border bg-background p-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Nenhuma obra cadastrada.
+              </p>
+              <Link
+                to="/cadastros"
+                className="mt-2 inline-block text-sm font-semibold text-primary hover:underline"
+              >
+                Cadastrar Centro de Custo e Obra
+              </Link>
+            </div>
+          ) : (
+            <Select value={obra} onValueChange={setObraVal}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Selecione a obra" />
+              </SelectTrigger>
+              <SelectContent>
+                {obras.map((o) => {
+                  const cc = ccById(o.centroCustoId);
+                  return (
+                    <SelectItem key={o.id} value={o.id}>
+                      {cc ? `${cc.codigo} — ${o.nome}` : o.nome}
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <Button
           onClick={handleEnter}
-          disabled={!obra || !role}
+          disabled={!obra || !role || obras.length === 0}
           className="w-full"
           size="lg"
         >

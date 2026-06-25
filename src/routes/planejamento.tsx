@@ -14,7 +14,7 @@ import {
   FileSpreadsheet,
   Inbox,
 } from "lucide-react";
-import { useObra, useHydrated } from "@/lib/obra-store";
+import { useObra, useHydrated, obraLabel } from "@/lib/obra-store";
 import { useFrentes } from "@/lib/cadastros-store";
 import { savePlanejamento, uid } from "@/lib/planejamento-store";
 
@@ -164,7 +164,7 @@ function PlanejamentoPage() {
           </div>
           {obra && (
             <span className="text-xs font-medium bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full">
-              {obra}
+              {obraLabel(obra)}
             </span>
           )}
         </div>
