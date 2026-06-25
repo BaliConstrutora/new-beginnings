@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Wrench, Users, Settings2, Map } from "lucide-react";
+import { Trash2, Wrench, Users, Settings2, Map, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +24,16 @@ import {
   useMaoObra,
   useFrentes,
 } from "@/lib/cadastros-store";
-import { useObra, useHydrated } from "@/lib/obra-store";
+import {
+  useObra,
+  useHydrated,
+  useCentrosCusto,
+  useObras,
+  addCentroCusto,
+  removeCentroCusto,
+  addObra,
+  removeObra,
+} from "@/lib/obra-store";
 import {
   getParametros,
   setParametros,
@@ -62,8 +71,11 @@ function CadastrosPage() {
         </p>
       </header>
 
-      <Tabs defaultValue="equip" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-12">
+      <Tabs defaultValue="obras" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 h-12">
+          <TabsTrigger value="obras" className="text-[11px] font-bold">
+            <Building2 className="mr-1 h-4 w-4" /> Obras
+          </TabsTrigger>
           <TabsTrigger value="equip" className="text-[11px] font-bold">
             <Wrench className="mr-1 h-4 w-4" /> Equip.
           </TabsTrigger>
@@ -78,6 +90,9 @@ function CadastrosPage() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="obras" className="mt-4">
+          <ObrasTab />
+        </TabsContent>
         <TabsContent value="equip" className="mt-4">
           <EquipamentosTab />
         </TabsContent>
@@ -91,6 +106,179 @@ function CadastrosPage() {
           <ParametrosTab />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ObrasTab() {
+  const centros = useCentrosCusto();
+  const obras = useObras();
+  const [codigo, setCodigo] = useState("");
+  const [nomeCC, setNomeCC] = useState("");
+  const [nomeObra, setNomeObra] = useState("");
+  const [ccSelecionado, setCcSelecionado] = useState("");
+
+  const handleSaveCC = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!codigo.trim() || !nomeCC.trim()) {
+      toast.error("Preencha código e nome do centro de custo.");
+      return;
+    }
+    addCentroCusto(codigo.trim(), nomeCC.trim());
+    setCodigo("");
+    setNomeCC("");
+    toast.success("Centro de Custo cadastrado!");
+  };
+
+  const handleSaveObra = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nomeObra.trim() || !ccSelecionado) {
+      toast.error("Preencha nome da obra e selecione o centro de custo.");
+      return;
+    }
+    addObra(nomeObra.trim(), ccSelecionado);
+    setNomeObra("");
+    setCcSelecionado("");
+    toast.success("Obra cadastrada!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <form
+        onSubmit={handleSaveCC}
+        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
+      >
+        <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Novo Centro de Custo
+        </p>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Código</Label>
+          <Input
+            value={codigo}
+            onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+            placeholder="Ex: CC-2024-0312"
+            className="h-12"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Nome</Label>
+          <Input
+            value={nomeCC}
+            onChange={(e) => setNomeCC(e.target.value)}
+            placeholder="Ex: Obras Federais SP"
+            className="h-12"
+          />
+        </div>
+        <Button type="submit" className="h-12 w-full font-bold">
+          Salvar Centro de Custo
+        </Button>
+      </form>
+
+      <form
+        onSubmit={handleSaveObra}
+        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
+      >
+        <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+          Nova Obra (1 por Centro de Custo)
+        </p>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Centro de Custo</Label>
+          <Select value={ccSelecionado} onValueChange={setCcSelecionado}>
+            <SelectTrigger className="h-12">
+              <SelectValue placeholder="Selecione o CC" />
+            </SelectTrigger>
+            <SelectContent>
+              {centros.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.codigo} — {c.nome}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {centros.length === 0 && (
+            <p className="text-xs text-muted-foreground">
+              Cadastre um Centro de Custo primeiro.
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Nome da Obra</Label>
+          <Input
+            value={nomeObra}
+            onChange={(e) => setNomeObra(e.target.value)}
+            placeholder="Ex: Duplicação BR-040 Lote 3"
+            className="h-12"
+          />
+        </div>
+        <Button
+          type="submit"
+          className="h-12 w-full font-bold"
+          disabled={centros.length === 0}
+        >
+          Salvar Obra
+        </Button>
+      </form>
+
+      <ListSection
+        title="Centros de Custo e Obras"
+        empty="Nenhum centro de custo cadastrado."
+      >
+        {centros.map((c) => {
+          const obra = obras.find((o) => o.centroCustoId === c.id);
+          return (
+            <li
+              key={c.id}
+              className="space-y-2 rounded-xl border border-border bg-card p-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate font-bold text-foreground">
+                    {c.codigo}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {c.nome}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    removeCentroCusto(c.id);
+                    toast.success("Centro de Custo removido.");
+                  }}
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                  aria-label="Remover CC"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              {obra ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/50 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-foreground">
+                      Obra: {obra.nome}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      removeObra(obra.id);
+                      toast.success("Obra removida.");
+                    }}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
+                    aria-label="Remover obra"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                  Sem obra vinculada.
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ListSection>
     </div>
   );
 }
