@@ -90,6 +90,9 @@ type ApontamentoItem = {
   equipamentos: EquipamentoRealizado[];
   maoObra: MaoObraRealizada[];
   salvo: boolean;
+  equipeId?: string;
+  equipeNome?: string;
+  equipeConfirmacao?: "confirmada" | "substituida" | "ignorar";
 };
 
 type Tela = "inicio" | "lista" | "form" | "avulso";
@@ -187,6 +190,9 @@ function ApontamentoPage() {
           horasExtras: "",
         })),
         salvo: false,
+        equipeId: (s as any).equipeId,
+        equipeNome: (s as any).equipeNome,
+        equipeConfirmacao: undefined,
       };
     });
   }, [plano, frentesCad, equipamentosCad, maoObraCad, itensApontados]);
@@ -890,6 +896,49 @@ function FormRealizado({
           </p>
         )}
       </div>
+
+      {/* Confirmação de equipe (opcional — só aparece se houver equipe planejada) */}
+      {form.equipeNome && (
+        <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+              👷 Equipe executora planejada
+            </p>
+            <span className="text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+              opcional
+            </span>
+          </div>
+          <p className="text-sm font-semibold text-foreground">{form.equipeNome}</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { value: "confirmada", label: "Confirmada", icon: "✓", activeClass: "bg-emerald-50 border-emerald-300 text-emerald-700" },
+                { value: "substituida", label: "Substituída", icon: "✕", activeClass: "bg-red-50 border-red-300 text-red-700" },
+                { value: "ignorar", label: "Ignorar", icon: "—", activeClass: "bg-muted border-border text-muted-foreground" },
+              ] as const
+            ).map(({ value, label, icon, activeClass }) => {
+              const isActive = form.equipeConfirmacao === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() =>
+                    setForm((p) => ({
+                      ...p,
+                      equipeConfirmacao: isActive ? undefined : value,
+                    }))
+                  }
+                  className={`flex h-9 items-center justify-center gap-1.5 rounded-xl border-2 text-[9px] font-semibold transition-colors ${
+                    isActive ? activeClass : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                  }`}
+                >
+                  <span className="text-[11px]">{icon}</span> {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <button
         type="button"
