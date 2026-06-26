@@ -86,7 +86,7 @@ function CadastrosPage() {
       </header>
 
       <Tabs defaultValue="obras" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-12">
+        <TabsList className="grid w-full grid-cols-6 h-12">
           <TabsTrigger value="obras" className="text-[11px] font-bold">
             <Building2 className="mr-1 h-4 w-4" /> Obras
           </TabsTrigger>
@@ -95,6 +95,9 @@ function CadastrosPage() {
           </TabsTrigger>
           <TabsTrigger value="mo" className="text-[11px] font-bold">
             <Users className="mr-1 h-4 w-4" /> M.Obra
+          </TabsTrigger>
+          <TabsTrigger value="equipes" className="text-[11px] font-bold">
+            <UsersRound className="mr-1 h-4 w-4" /> Equipes
           </TabsTrigger>
           <TabsTrigger value="frente" className="text-[11px] font-bold">
             <Map className="mr-1 h-4 w-4" /> Frente
@@ -112,6 +115,9 @@ function CadastrosPage() {
         </TabsContent>
         <TabsContent value="mo" className="mt-4">
           <MaoObraTab />
+        </TabsContent>
+        <TabsContent value="equipes" className="mt-4">
+          <EquipesTab />
         </TabsContent>
         <TabsContent value="frente" className="mt-4">
           <FrentesTab />
