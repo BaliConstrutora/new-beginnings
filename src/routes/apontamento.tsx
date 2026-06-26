@@ -18,6 +18,7 @@ import { useObra, useHydrated } from "@/lib/obra-store";
 import { useEquipamentos, useMaoObra, useFrentes } from "@/lib/cadastros-store";
 import { usePlanejamento } from "@/lib/planejamento-store";
 import { saveApontamento } from "@/lib/apontamento-store";
+import { useEquipes } from "@/lib/equipe-store";
 
 export const Route = createFileRoute("/apontamento")({
   head: () => ({
@@ -92,6 +93,7 @@ type ApontamentoItem = {
   equipeId?: string;
   equipeNome?: string;
   equipeConfirmacao?: "confirmada" | "substituida" | "ignorar";
+  equipeSubstitutaId?: string;
 };
 
 type Tela = "inicio" | "lista" | "form" | "avulso";
@@ -191,6 +193,7 @@ function ApontamentoPage() {
         equipeId: (s as any).equipeId,
         equipeNome: (s as any).equipeNome,
         equipeConfirmacao: undefined,
+        equipeSubstitutaId: undefined,
       };
     });
   }, [plano, frentesCad, equipamentosCad, maoObraCad, itensApontados]);
@@ -807,44 +810,9 @@ function FormRealizado({
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           🏗️ Equipamentos
         </p>
-        {form.equipamentos.map((eq) => (
-          <div key={eq.id} className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
-            <p className="text-xs font-semibold text-foreground">
-              {eq.prefixo} — {eq.descricao}
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Horímetro inicial">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={eq.horimetroInicial}
-                  onChange={(e) =>
-                    updateEquipamento(eq.id, { horimetroInicial: e.target.value })
-                  }
-                  placeholder="0"
-                  className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </Field>
-              <Field label="Horímetro final">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={eq.horimetroFinal}
-                  onChange={(e) =>
-                    updateEquipamento(eq.id, { horimetroFinal: e.target.value })
-                  }
-                  placeholder="0"
-                  className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </Field>
-            </div>
-          </div>
-        ))}
-        {form.equipamentos.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-xs text-muted-foreground">
-            Nenhum equipamento cadastrado.
-          </p>
-        )}
+        <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-xs italic text-muted-foreground">
+          Em breve
+        </p>
       </div>
 
       {/* Mão de obra */}
@@ -852,87 +820,20 @@ function FormRealizado({
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           👷 Mão de obra
         </p>
-        {form.maoObra.map((mo) => (
-          <div key={mo.id} className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-foreground">{mo.funcao}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Field label="Horas normais">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={mo.horasNormais}
-                  onChange={(e) =>
-                    updateMaoObra(mo.id, { horasNormais: e.target.value })
-                  }
-                  placeholder="0"
-                  className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </Field>
-              <Field label="Horas extras">
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={mo.horasExtras}
-                  onChange={(e) =>
-                    updateMaoObra(mo.id, { horasExtras: e.target.value })
-                  }
-                  placeholder="0"
-                  className="h-11 w-full rounded-xl border border-input px-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </Field>
-            </div>
-          </div>
-        ))}
-        {form.maoObra.length === 0 && (
-          <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-xs text-muted-foreground">
-            Nenhuma função cadastrada.
-          </p>
-        )}
+        <p className="rounded-xl border border-dashed border-border bg-muted/30 p-3 text-center text-xs italic text-muted-foreground">
+          Em breve
+        </p>
       </div>
 
       {/* Confirmação de equipe (opcional — só aparece se houver equipe planejada) */}
       {form.equipeNome && (
-        <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-              👷 Equipe executora planejada
-            </p>
-            <span className="text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-              opcional
-            </span>
-          </div>
-          <p className="text-sm font-semibold text-foreground">{form.equipeNome}</p>
-          <div className="grid grid-cols-3 gap-2">
-            {(
-              [
-                { value: "confirmada", label: "Confirmada", icon: "✓", activeClass: "bg-emerald-50 border-emerald-300 text-emerald-700" },
-                { value: "substituida", label: "Substituída", icon: "✕", activeClass: "bg-red-50 border-red-300 text-red-700" },
-                { value: "ignorar", label: "Ignorar", icon: "—", activeClass: "bg-muted border-border text-muted-foreground" },
-              ] as const
-            ).map(({ value, label, icon, activeClass }) => {
-              const isActive = form.equipeConfirmacao === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() =>
-                    setForm((p) => ({
-                      ...p,
-                      equipeConfirmacao: isActive ? undefined : value,
-                    }))
-                  }
-                  className={`flex h-9 items-center justify-center gap-1.5 rounded-xl border-2 text-[9px] font-semibold transition-colors ${
-                    isActive ? activeClass : "border-border bg-background text-muted-foreground hover:border-primary/40"
-                  }`}
-                >
-                  <span className="text-[11px]">{icon}</span> {label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <EquipeConfirmBlock
+          equipeNome={form.equipeNome}
+          confirmacao={form.equipeConfirmacao}
+          equipeSubstitutaId={form.equipeSubstitutaId}
+          onConfirmacao={(v) => setForm((p) => ({ ...p, equipeConfirmacao: p.equipeConfirmacao === v ? undefined : v }))}
+          onSubstituta={(id) => setForm((p) => ({ ...p, equipeSubstitutaId: id }))}
+        />
       )}
 
       <button
@@ -942,6 +843,98 @@ function FormRealizado({
       >
         <CheckCircle2 className="h-5 w-5" /> Salvar apontamento
       </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// EquipeConfirmBlock
+
+function EquipeConfirmBlock({
+  equipeNome,
+  confirmacao,
+  equipeSubstitutaId,
+  onConfirmacao,
+  onSubstituta,
+}: {
+  equipeNome: string;
+  confirmacao?: "confirmada" | "substituida" | "ignorar";
+  equipeSubstitutaId?: string;
+  onConfirmacao: (v: "confirmada" | "substituida" | "ignorar") => void;
+  onSubstituta: (id: string) => void;
+}) {
+  const equipes = useEquipes();
+
+  const OPCOES = [
+    {
+      value: "confirmada" as const,
+      label: "Confirmada",
+      icon: "✓",
+      activeClass: "bg-emerald-500 border-emerald-500 text-white",
+    },
+    {
+      value: "substituida" as const,
+      label: "Substituída",
+      icon: "✕",
+      activeClass: "bg-red-100 border-red-300 text-red-700",
+    },
+    {
+      value: "ignorar" as const,
+      label: "Ignorar",
+      icon: "—",
+      activeClass: "bg-muted border-border text-muted-foreground",
+    },
+  ];
+
+  return (
+    <div className="rounded-2xl border-2 border-border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          👷 Equipe executora planejada
+        </p>
+        <span className="text-[10px] font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
+          opcional
+        </span>
+      </div>
+      <p className="text-sm font-semibold text-foreground">{equipeNome}</p>
+      <div className="grid grid-cols-3 gap-2">
+        {OPCOES.map(({ value, label, icon, activeClass }) => {
+          const isActive = confirmacao === value;
+          return (
+            <button
+              key={value}
+              type="button"
+              onClick={() => onConfirmacao(value)}
+              className={`flex h-9 items-center justify-center gap-1.5 rounded-xl border-2 text-[9px] font-semibold transition-colors ${
+                isActive
+                  ? activeClass
+                  : "border-border bg-background text-muted-foreground hover:border-primary/40"
+              }`}
+            >
+              <span className="text-[11px]">{icon}</span> {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Select de equipe substituta — aparece só quando Substituída está ativo */}
+      {confirmacao === "substituida" && (
+        <div className="space-y-1.5">
+          <p className="text-xs font-medium text-muted-foreground">Equipe que executou</p>
+          <select
+            value={equipeSubstitutaId ?? ""}
+            onChange={(e) => onSubstituta(e.target.value)}
+            className="w-full rounded-xl border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+          >
+            <option value="">Selecione a equipe</option>
+            {equipes.map((eq) => (
+              <option key={eq.id} value={eq.id}>
+                {eq.nome}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 }
