@@ -5,6 +5,8 @@ const MO_KEY = "borabora.cadastros.maoobra";
 const FRENTE_KEY = "borabora.cadastros.frentes";
 const EVENT = "borabora:cadastros";
 
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
 export type EquipamentoCadastro = {
   id: string;
   prefixo: string;
@@ -13,9 +15,11 @@ export type EquipamentoCadastro = {
 
 export type MaoObraCadastro = {
   id: string;
-  funcao: string;
-  categoria: "direta" | "indireta";
+  nome: string;   // Nome do profissional — ex: "Matheus Cunha"
+  funcao: string; // Função livre — ex: "Ajudante"
 };
+
+export type FrenteCadastro = { id: string; nome: string };
 
 export const DESCRICOES_EQUIPAMENTO = [
   "Escavadeira Hidráulica",
@@ -27,6 +31,8 @@ export const DESCRICOES_EQUIPAMENTO = [
   "Trator de Esteira",
   "Caminhão Pipa",
 ] as const;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function read<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
@@ -45,6 +51,8 @@ function write<T>(key: string, value: T[]) {
 
 const uid = () =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+
+// ─── Equipamentos ─────────────────────────────────────────────────────────────
 
 export function useEquipamentos() {
   const [list, setList] = useState<EquipamentoCadastro[]>([]);
@@ -68,11 +76,10 @@ export function addEquipamento(prefixo: string, descricao: string) {
 }
 
 export function removeEquipamento(id: string) {
-  write(
-    EQUIP_KEY,
-    read<EquipamentoCadastro>(EQUIP_KEY).filter((e) => e.id !== id),
-  );
+  write(EQUIP_KEY, read<EquipamentoCadastro>(EQUIP_KEY).filter((e) => e.id !== id));
 }
+
+// ─── Mão de Obra ──────────────────────────────────────────────────────────────
 
 export function useMaoObra() {
   const [list, setList] = useState<MaoObraCadastro[]>([]);
@@ -89,9 +96,9 @@ export function useMaoObra() {
   return list;
 }
 
-export function addMaoObra(funcao: string, categoria: "direta" | "indireta") {
+export function addMaoObra(nome: string, funcao: string) {
   const list = read<MaoObraCadastro>(MO_KEY);
-  list.push({ id: uid(), funcao, categoria });
+  list.push({ id: uid(), nome, funcao });
   write(MO_KEY, list);
 }
 
@@ -99,7 +106,7 @@ export function removeMaoObra(id: string) {
   write(MO_KEY, read<MaoObraCadastro>(MO_KEY).filter((m) => m.id !== id));
 }
 
-export type FrenteCadastro = { id: string; nome: string };
+// ─── Frentes ─────────────────────────────────────────────────────────────────
 
 export function useFrentes() {
   const [list, setList] = useState<FrenteCadastro[]>([]);

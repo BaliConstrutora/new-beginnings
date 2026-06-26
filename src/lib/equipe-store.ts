@@ -7,8 +7,8 @@ const EVENT = "borabora:cadastros";
 
 export type MembroEquipe = {
   maoObraId: string; // FK para MaoObraCadastro.id
-  nome: string;      // snapshot do nome no momento do cadastro
-  funcao: string;    // snapshot da função
+  nome: string;      // Nome do profissional — ex: "Matheus Cunha"
+  funcao: string;    // Função — ex: "Ajudante"
 };
 
 export type Equipe = {
