@@ -1,16 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  Trash2,
-  Wrench,
-  Users,
-  Settings2,
-  Map,
-  Building2,
-  UsersRound,
-} from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Trash2, Wrench, Users, Settings2, Map, Building2, HardHat, X, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,34 +24,24 @@ import {
   useMaoObra,
   useFrentes,
 } from "@/lib/cadastros-store";
-import {
-  useObras,
-  addObra,
-  removeObra,
-  useObra,
-  useHydrated,
-} from "@/lib/obra-store";
+import { useObra, useHydrated, useObras, addObra, removeObra } from "@/lib/obra-store";
 import {
   getParametros,
   setParametros,
   type ModeloPlanejamento,
 } from "@/lib/parametros-store";
 import {
-  useEquipes,
   addEquipe,
   removeEquipe,
+  useEquipes,
   type MembroEquipe,
-} from "@/lib/equipes-store";
+} from "@/lib/equipe-store";
 
 export const Route = createFileRoute("/cadastros")({
   head: () => ({
     meta: [
-      { title: "Cadastros e Configurações da Obra — Bora Bora" },
-      {
-        name: "description",
-        content:
-          "Cadastre obras, equipamentos, funções, frentes e parâmetros.",
-      },
+      { title: "Cadastros e Configurações — Bora Bora" },
+      { name: "description", content: "Cadastre obras, equipes, equipamentos e parâmetros." },
     ],
   }),
   component: CadastrosPage,
@@ -75,56 +56,40 @@ function CadastrosPage() {
   }, [hydrated, obra, navigate]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 pb-4">
+    <div className="space-y-5 pb-4">
       <header>
-        <h1 className="text-2xl font-bold text-foreground">
-          Cadastros e Configurações
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Recursos e parâmetros da obra.
-        </p>
+        <h1 className="text-2xl font-bold">Cadastros e Configurações</h1>
+        <p className="text-sm text-muted-foreground">Recursos e parâmetros da obra.</p>
       </header>
 
       <Tabs defaultValue="obras" className="w-full">
         <TabsList className="grid w-full grid-cols-6 h-12">
-          <TabsTrigger value="obras" className="text-[11px] font-bold">
-            <Building2 className="mr-1 h-4 w-4" /> Obras
+          <TabsTrigger value="obras" className="text-[10px] font-bold px-1">
+            <Building2 className="mr-0.5 h-3.5 w-3.5" /> Obras
           </TabsTrigger>
-          <TabsTrigger value="equip" className="text-[11px] font-bold">
-            <Wrench className="mr-1 h-4 w-4" /> Equip.
+          <TabsTrigger value="equip" className="text-[10px] font-bold px-1">
+            <Wrench className="mr-0.5 h-3.5 w-3.5" /> Equip.
           </TabsTrigger>
-          <TabsTrigger value="mo" className="text-[11px] font-bold">
-            <Users className="mr-1 h-4 w-4" /> M.Obra
+          <TabsTrigger value="mo" className="text-[10px] font-bold px-1">
+            <Users className="mr-0.5 h-3.5 w-3.5" /> M.Obra
           </TabsTrigger>
-          <TabsTrigger value="equipes" className="text-[11px] font-bold">
-            <UsersRound className="mr-1 h-4 w-4" /> Equipes
+          <TabsTrigger value="frente" className="text-[10px] font-bold px-1">
+            <Map className="mr-0.5 h-3.5 w-3.5" /> Frente
           </TabsTrigger>
-          <TabsTrigger value="frente" className="text-[11px] font-bold">
-            <Map className="mr-1 h-4 w-4" /> Frente
+          <TabsTrigger value="equipe" className="text-[10px] font-bold px-1">
+            <HardHat className="mr-0.5 h-3.5 w-3.5" /> Equipe
           </TabsTrigger>
-          <TabsTrigger value="param" className="text-[11px] font-bold">
-            <Settings2 className="mr-1 h-4 w-4" /> Param.
+          <TabsTrigger value="param" className="text-[10px] font-bold px-1">
+            <Settings2 className="mr-0.5 h-3.5 w-3.5" /> Param.
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="obras" className="mt-4">
-          <ObrasTab />
-        </TabsContent>
-        <TabsContent value="equip" className="mt-4">
-          <EquipamentosTab />
-        </TabsContent>
-        <TabsContent value="mo" className="mt-4">
-          <MaoObraTab />
-        </TabsContent>
-        <TabsContent value="equipes" className="mt-4">
-          <EquipesTab />
-        </TabsContent>
-        <TabsContent value="frente" className="mt-4">
-          <FrentesTab />
-        </TabsContent>
-        <TabsContent value="param" className="mt-4">
-          <ParametrosTab />
-        </TabsContent>
+        <TabsContent value="obras" className="mt-4"><ObrasTab /></TabsContent>
+        <TabsContent value="equip" className="mt-4"><EquipamentosTab /></TabsContent>
+        <TabsContent value="mo" className="mt-4"><MaoObraTab /></TabsContent>
+        <TabsContent value="frente" className="mt-4"><FrentesTab /></TabsContent>
+        <TabsContent value="equipe" className="mt-4"><EquipesTab /></TabsContent>
+        <TabsContent value="param" className="mt-4"><ParametrosTab /></TabsContent>
       </Tabs>
     </div>
   );
@@ -138,10 +103,7 @@ function ObrasTab() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome.trim()) {
-      toast.error("Informe o nome da obra.");
-      return;
-    }
+    if (!nome.trim()) { toast.error("Informe o nome da obra."); return; }
     addObra(nome.trim());
     setNome("");
     toast.success("Obra cadastrada!");
@@ -149,34 +111,139 @@ function ObrasTab() {
 
   return (
     <div className="space-y-4">
-      <form
-        onSubmit={handleSave}
-        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
-      >
+      <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <div className="space-y-1.5">
           <Label className="text-sm font-semibold">Nome da Obra</Label>
-          <Input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Rodovia BR-381 Trecho KM 120–180"
-            className="h-12"
-          />
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Rodovia BR-381 Trecho KM 120–180" className="h-12" />
         </div>
+        <Button type="submit" className="h-12 w-full font-bold">Cadastrar Obra</Button>
+      </form>
+      <ListSection title="Obras Cadastradas" empty="Nenhuma obra cadastrada.">
+        {obras.map((o) => (
+          <ListItem key={o.id} title={o.nome} onRemove={() => { removeObra(o.id); toast.success("Obra removida."); }} />
+        ))}
+      </ListSection>
+    </div>
+  );
+}
+
+// ─── Aba Equipes ──────────────────────────────────────────────────────────────
+
+function EquipesTab() {
+  const equipes = useEquipes();
+  const funcoes = useMaoObra();
+  const [nome, setNome] = useState("");
+  const [membros, setMembros] = useState<MembroEquipe[]>([]);
+  const [moSelecionadoId, setMoSelecionadoId] = useState("");
+
+  // Funções ainda não adicionadas à equipe
+  const disponiveis = funcoes.filter(
+    (f) => !membros.some((m) => m.maoObraId === f.id)
+  );
+
+  const handleAddMembro = () => {
+    const mo = funcoes.find((f) => f.id === moSelecionadoId);
+    if (!mo) return;
+    setMembros((p) => [
+      ...p,
+      { maoObraId: mo.id, nome: mo.funcao, funcao: mo.funcao },
+    ]);
+    setMoSelecionadoId("");
+  };
+
+  const handleRemoveMembro = (maoObraId: string) =>
+    setMembros((p) => p.filter((m) => m.maoObraId !== maoObraId));
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim()) { toast.error("Informe o nome da equipe."); return; }
+    if (membros.length === 0) { toast.error("Adicione ao menos um membro."); return; }
+    addEquipe(nome.trim(), membros);
+    setNome("");
+    setMembros([]);
+    toast.success("Equipe cadastrada!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Nome da Equipe</Label>
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Equipe Alpha" className="h-12" />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Adicionar membro</Label>
+          {funcoes.length === 0 ? (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+              Cadastre funções em Mão de Obra primeiro.
+            </p>
+          ) : disponiveis.length === 0 ? (
+            <p className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              Todas as funções já foram adicionadas.
+            </p>
+          ) : (
+            <div className="flex gap-2">
+              <Select value={moSelecionadoId} onValueChange={setMoSelecionadoId}>
+                <SelectTrigger className="h-11 flex-1">
+                  <SelectValue placeholder="Selecionar do cadastro M.Obra" />
+                </SelectTrigger>
+                <SelectContent>
+                  {disponiveis.map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.funcao}
+                      <span className="ml-2 text-xs text-muted-foreground capitalize">{f.categoria}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                onClick={handleAddMembro}
+                disabled={!moSelecionadoId}
+                className="h-11 px-3"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Lista de membros adicionados */}
+        {membros.length > 0 && (
+          <ul className="space-y-1.5">
+            {membros.map((m) => (
+              <li
+                key={m.maoObraId}
+                className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2"
+              >
+                <div>
+                  <p className="text-sm font-medium text-foreground">{m.funcao}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveMembro(m.maoObraId)}
+                  className="grid h-7 w-7 place-items-center rounded-lg text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <Button type="submit" className="h-12 w-full font-bold">
-          Salvar Obra
+          Salvar Equipe
         </Button>
       </form>
 
-      <ListSection title="Obras Cadastradas" empty="Nenhuma obra cadastrada.">
-        {obras.map((o) => (
+      <ListSection title="Equipes Cadastradas" empty="Nenhuma equipe cadastrada.">
+        {equipes.map((eq) => (
           <ListItem
-            key={o.id}
-            title={o.nome}
-            subtitle="Obra"
-            onRemove={() => {
-              removeObra(o.id);
-              toast.success("Obra removida.");
-            }}
+            key={eq.id}
+            title={eq.nome}
+            subtitle={`${eq.membros.length} membro${eq.membros.length !== 1 ? "s" : ""} · ${eq.membros.map((m) => m.funcao).join(", ")}`}
+            onRemove={() => { removeEquipe(eq.id); toast.success("Equipe removida."); }}
           />
         ))}
       </ListSection>
@@ -184,6 +251,87 @@ function ObrasTab() {
   );
 }
 
+// ─── Aba Equipamentos ─────────────────────────────────────────────────────────
+
+function EquipamentosTab() {
+  const equipamentos = useEquipamentos();
+  const [prefixo, setPrefixo] = useState("");
+  const [descricao, setDescricao] = useState("");
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!prefixo.trim() || !descricao) { toast.error("Preencha prefixo e descrição."); return; }
+    addEquipamento(prefixo.trim(), descricao);
+    setPrefixo("");
+    setDescricao("");
+    toast.success("Equipamento cadastrado!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Prefixo / Tag</Label>
+          <Input value={prefixo} onChange={(e) => setPrefixo(e.target.value.toUpperCase())} placeholder="Ex: ESC-01" className="h-12" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Descrição do Equipamento</Label>
+          <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} placeholder="Ex: Trator de Esteira D8" className="h-12" />
+        </div>
+        <Button type="submit" className="h-12 w-full font-bold">Salvar Equipamento</Button>
+      </form>
+      <ListSection title="Equipamentos Cadastrados" empty="Nenhum equipamento cadastrado.">
+        {equipamentos.map((eq) => (
+          <ListItem key={eq.id} title={eq.prefixo} subtitle={eq.descricao} onRemove={() => { removeEquipamento(eq.id); toast.success("Equipamento removido."); }} />
+        ))}
+      </ListSection>
+    </div>
+  );
+}
+
+// ─── Aba Mão de Obra ──────────────────────────────────────────────────────────
+
+function MaoObraTab() {
+  const funcoes = useMaoObra();
+  const [funcao, setFuncao] = useState("");
+  const [categoria, setCategoria] = useState<"direta" | "indireta" | "">("");
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!funcao.trim() || !categoria) { toast.error("Preencha função e categoria."); return; }
+    addMaoObra(funcao.trim(), categoria);
+    setFuncao("");
+    setCategoria("");
+    toast.success("Função cadastrada!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Função</Label>
+          <Input value={funcao} onChange={(e) => setFuncao(e.target.value)} placeholder="Ex: Operador de Escavadeira" className="h-12" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Categoria</Label>
+          <Select value={categoria} onValueChange={(v) => setCategoria(v as "direta" | "indireta")}>
+            <SelectTrigger className="h-12"><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="direta">Direta (Produção)</SelectItem>
+              <SelectItem value="indireta">Indireta (Apoio)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" className="h-12 w-full font-bold">Salvar Função</Button>
+      </form>
+      <ListSection title="Funções Cadastradas" empty="Nenhuma função cadastrada.">
+        {funcoes.map((m) => (
+          <ListItem key={m.id} title={m.funcao} subtitle={m.categoria === "direta" ? "Direta (Produção)" : "Indireta (Apoio)"} onRemove={() => { removeMaoObra(m.id); toast.success("Função removida."); }} />
+        ))}
+      </ListSection>
+    </div>
+  );
+}
 
 // ─── Aba Frentes ──────────────────────────────────────────────────────────────
 
@@ -193,10 +341,7 @@ function FrentesTab() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nome.trim()) {
-      toast.error("Informe o nome da frente.");
-      return;
-    }
+    if (!nome.trim()) { toast.error("Informe o nome da frente."); return; }
     addFrente(nome.trim());
     setNome("");
     toast.success("Frente cadastrada!");
@@ -204,38 +349,16 @@ function FrentesTab() {
 
   return (
     <div className="space-y-4">
-      <form
-        onSubmit={handleSave}
-        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
-      >
+      <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <div className="space-y-1.5">
           <Label className="text-sm font-semibold">Nome da Frente</Label>
-          <Input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Pavimentação, Fresagem, Drenagem"
-            className="h-12"
-          />
+          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex: Pavimentação, Fresagem, Drenagem" className="h-12" />
         </div>
-        <Button type="submit" className="h-12 w-full font-bold">
-          Salvar Frente
-        </Button>
+        <Button type="submit" className="h-12 w-full font-bold">Salvar Frente</Button>
       </form>
-
-      <ListSection
-        title="Frentes Cadastradas"
-        empty="Nenhuma frente cadastrada."
-      >
+      <ListSection title="Frentes Cadastradas" empty="Nenhuma frente cadastrada.">
         {frentes.map((f) => (
-          <ListItem
-            key={f.id}
-            title={f.nome}
-            subtitle="Frente de Serviço"
-            onRemove={() => {
-              removeFrente(f.id);
-              toast.success("Frente removida.");
-            }}
-          />
+          <ListItem key={f.id} title={f.nome} subtitle="Frente de Serviço" onRemove={() => { removeFrente(f.id); toast.success("Frente removida."); }} />
         ))}
       </ListSection>
     </div>
@@ -265,360 +388,50 @@ function ParametrosTab() {
   if (!loaded) return null;
 
   return (
-    <form
-      onSubmit={handleSave}
-      className="space-y-4 rounded-2xl border-2 border-border bg-card p-4"
-    >
+    <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
       <div className="space-y-1.5">
         <Label className="text-sm font-semibold">Modelo de Planejamento</Label>
-        <Select
-          value={modelo}
-          onValueChange={(v) => setModelo(v as ModeloPlanejamento)}
-        >
-          <SelectTrigger className="h-12">
-            <SelectValue />
-          </SelectTrigger>
+        <Select value={modelo} onValueChange={(v) => setModelo(v as ModeloPlanejamento)}>
+          <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="centralizado">Centralizado na Sede</SelectItem>
-            <SelectItem value="descentralizado">
-              Descentralizado na Obra
-            </SelectItem>
+            <SelectItem value="descentralizado">Descentralizado na Obra</SelectItem>
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          Centralizado: apenas perfil Sede pode editar o planejamento.
-        </p>
+        <p className="text-xs text-muted-foreground">Centralizado: apenas perfil Sede pode editar o planejamento.</p>
       </div>
       <div className="space-y-1.5">
-        <Label className="text-sm font-semibold">
-          Horário Limite para Planejamento (cut-off)
-        </Label>
-        <Input
-          type="time"
-          value={horario}
-          onChange={(e) => setHorario(e.target.value)}
-          className="h-12"
-        />
+        <Label className="text-sm font-semibold">Horário Limite para Planejamento (cut-off)</Label>
+        <Input type="time" value={horario} onChange={(e) => setHorario(e.target.value)} className="h-12" />
       </div>
-      <Button type="submit" className="h-12 w-full font-bold">
-        Salvar Parâmetros
-      </Button>
+      <Button type="submit" className="h-12 w-full font-bold">Salvar Parâmetros</Button>
     </form>
   );
 }
 
-// ─── Aba Equipamentos ─────────────────────────────────────────────────────────
+// ─── Auxiliares ───────────────────────────────────────────────────────────────
 
-function EquipamentosTab() {
-  const equipamentos = useEquipamentos();
-  const [prefixo, setPrefixo] = useState("");
-  const [descricao, setDescricao] = useState("");
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prefixo.trim() || !descricao) {
-      toast.error("Preencha prefixo e descrição.");
-      return;
-    }
-    addEquipamento(prefixo.trim(), descricao);
-    setPrefixo("");
-    setDescricao("");
-    toast.success("Equipamento cadastrado!");
-  };
-
-  return (
-    <div className="space-y-4">
-      <form
-        onSubmit={handleSave}
-        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
-      >
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Prefixo / Tag</Label>
-          <Input
-            value={prefixo}
-            onChange={(e) => setPrefixo(e.target.value.toUpperCase())}
-            placeholder="Ex: ESC-01"
-            className="h-12"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">
-            Descrição do Equipamento
-          </Label>
-          <Input
-            value={descricao}
-            onChange={(e) => setDescricao(e.target.value)}
-            placeholder="Ex: Trator de Esteira D8"
-            className="h-12"
-          />
-        </div>
-        <Button type="submit" className="h-12 w-full font-bold">
-          Salvar Equipamento
-        </Button>
-      </form>
-
-      <ListSection
-        title="Equipamentos Cadastrados"
-        empty="Nenhum equipamento cadastrado."
-      >
-        {equipamentos.map((eq) => (
-          <ListItem
-            key={eq.id}
-            title={eq.prefixo}
-            subtitle={eq.descricao}
-            onRemove={() => {
-              removeEquipamento(eq.id);
-              toast.success("Equipamento removido.");
-            }}
-          />
-        ))}
-      </ListSection>
-    </div>
-  );
-}
-
-// ─── Aba Mão de Obra ──────────────────────────────────────────────────────────
-
-function MaoObraTab() {
-  const funcoes = useMaoObra();
-  const [funcao, setFuncao] = useState("");
-  const [categoria, setCategoria] = useState<"direta" | "indireta" | "">("");
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!funcao.trim() || !categoria) {
-      toast.error("Preencha função e categoria.");
-      return;
-    }
-    addMaoObra(funcao.trim(), categoria);
-    setFuncao("");
-    setCategoria("");
-    toast.success("Função cadastrada!");
-  };
-
-  return (
-    <div className="space-y-4">
-      <form
-        onSubmit={handleSave}
-        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
-      >
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Função</Label>
-          <Input
-            value={funcao}
-            onChange={(e) => setFuncao(e.target.value)}
-            placeholder="Ex: Operador de Escavadeira"
-            className="h-12"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Categoria</Label>
-          <Select
-            value={categoria}
-            onValueChange={(v) => setCategoria(v as "direta" | "indireta")}
-          >
-            <SelectTrigger className="h-12">
-              <SelectValue placeholder="Selecione" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="direta">Direta (Produção)</SelectItem>
-              <SelectItem value="indireta">Indireta (Apoio)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button type="submit" className="h-12 w-full font-bold">
-          Salvar Função
-        </Button>
-      </form>
-
-      <ListSection
-        title="Funções Cadastradas"
-        empty="Nenhuma função cadastrada."
-      >
-        {funcoes.map((m) => (
-          <ListItem
-            key={m.id}
-            title={m.funcao}
-            subtitle={
-              m.categoria === "direta" ? "Direta (Produção)" : "Indireta (Apoio)"
-            }
-            onRemove={() => {
-              removeMaoObra(m.id);
-              toast.success("Função removida.");
-            }}
-          />
-        ))}
-      </ListSection>
-    </div>
-  );
-}
-
-// ─── Aba Equipes ──────────────────────────────────────────────────────────────
-
-function EquipesTab() {
-  const equipes = useEquipes();
-  const funcoes = useMaoObra();
-  const [nome, setNome] = useState("");
-  const [selecionados, setSelecionados] = useState<Record<string, boolean>>({});
-
-  const toggle = (id: string) =>
-    setSelecionados((s) => ({ ...s, [id]: !s[id] }));
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nome.trim()) {
-      toast.error("Informe o nome da equipe.");
-      return;
-    }
-    const membros: MembroEquipe[] = funcoes
-      .filter((f) => selecionados[f.id])
-      .map((f) => ({ maoObraId: f.id, nome: f.funcao, funcao: f.funcao }));
-    if (membros.length === 0) {
-      toast.error("Selecione pelo menos um membro.");
-      return;
-    }
-    addEquipe(nome.trim(), membros);
-    setNome("");
-    setSelecionados({});
-    toast.success("Equipe cadastrada!");
-  };
-
-  return (
-    <div className="space-y-4">
-      <form
-        onSubmit={handleSave}
-        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
-      >
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Nome da Equipe</Label>
-          <Input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex: Equipe Pavimentação A"
-            className="h-12"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Membros</Label>
-          {funcoes.length === 0 ? (
-            <p className="rounded-xl border-2 border-dashed border-border p-4 text-center text-sm text-muted-foreground">
-              Cadastre funções na aba M.Obra antes de montar uma equipe.
-            </p>
-          ) : (
-            <ul className="space-y-1.5">
-              {funcoes.map((f) => (
-                <li
-                  key={f.id}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-background p-3"
-                >
-                  <Checkbox
-                    id={`m-${f.id}`}
-                    checked={!!selecionados[f.id]}
-                    onCheckedChange={() => toggle(f.id)}
-                  />
-                  <label
-                    htmlFor={`m-${f.id}`}
-                    className="flex flex-1 cursor-pointer items-center justify-between gap-2"
-                  >
-                    <span className="font-semibold text-foreground">
-                      {f.funcao}
-                    </span>
-                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                      {f.categoria === "direta" ? "Direta" : "Indireta"}
-                    </span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <Button type="submit" className="h-12 w-full font-bold">
-          Salvar Equipe
-        </Button>
-      </form>
-
-      <ListSection
-        title="Equipes Cadastradas"
-        empty="Nenhuma equipe cadastrada."
-      >
-        {equipes.map((eq) => {
-          const nomes = eq.membros.map((m) => m.funcao).join(", ");
-          return (
-            <ListItem
-              key={eq.id}
-              title={eq.nome}
-              subtitle={`${eq.membros.length} membro${eq.membros.length === 1 ? "" : "s"}${nomes ? " — " + nomes : ""}`}
-              onRemove={() => {
-                removeEquipe(eq.id);
-                toast.success("Equipe removida.");
-              }}
-            />
-          );
-        })}
-      </ListSection>
-    </div>
-  );
-}
-
-// ─── Componentes auxiliares ───────────────────────────────────────────────────
-
-function ListSection({
-  title,
-  empty,
-  children,
-}: {
-  title: string;
-  empty: string;
-  children: React.ReactNode;
-}) {
+function ListSection({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
   const items = Array.isArray(children) ? children : [children];
   const hasItems = items.some(Boolean);
   return (
     <div className="space-y-2">
-      <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-        {title}
-      </p>
-      {hasItems ? (
-        <ul className="space-y-2">{children}</ul>
-      ) : (
-        <p className="rounded-xl border-2 border-dashed border-border bg-card p-4 text-center text-sm text-muted-foreground">
-          {empty}
-        </p>
+      <p className="text-xs font-black uppercase tracking-wider text-muted-foreground">{title}</p>
+      {hasItems ? <ul className="space-y-2">{children}</ul> : (
+        <p className="rounded-xl border-2 border-dashed border-border bg-card p-4 text-center text-sm text-muted-foreground">{empty}</p>
       )}
     </div>
   );
 }
 
-function ListItem({
-  title,
-  subtitle,
-  badge,
-  onRemove,
-}: {
-  title: string;
-  subtitle: string;
-  badge?: string;
-  onRemove: () => void;
-}) {
+function ListItem({ title, subtitle, onRemove }: { title: string; subtitle?: string; onRemove: () => void }) {
   return (
     <li className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate font-bold text-foreground">{title}</p>
-          {badge && (
-            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-              {badge}
-            </span>
-          )}
-        </div>
-        <p className="truncate text-xs text-muted-foreground">{subtitle}</p>
+      <div className="min-w-0">
+        <p className="truncate font-bold text-foreground">{title}</p>
+        {subtitle && <p className="truncate text-xs text-muted-foreground">{subtitle}</p>}
       </div>
-      <button
-        type="button"
-        onClick={onRemove}
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-destructive hover:bg-destructive/10"
-        aria-label="Remover"
-      >
+      <button type="button" onClick={onRemove} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-destructive hover:bg-destructive/10" aria-label="Remover">
         <Trash2 className="h-4 w-4" />
       </button>
     </li>
