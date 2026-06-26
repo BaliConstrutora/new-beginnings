@@ -19,6 +19,9 @@ export type ServicoPlanejado = {
   servico: string;
   metaQuantidade: string; // = volume (m³)
   unidade: string; // = "m³"
+  // Equipe executora (opcional — item C do planejamento)
+  equipeId?: string;
+  equipeNome?: string;
 };
 
 export type EquipePrevista = { id: string; funcaoId: string; qtdPrevista: string };
