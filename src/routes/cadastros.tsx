@@ -45,6 +45,12 @@ import {
   setParametros,
   type ModeloPlanejamento,
 } from "@/lib/parametros-store";
+import {
+  useEquipes,
+  addEquipe,
+  removeEquipe,
+  type MembroEquipe,
+} from "@/lib/equipes-store";
 
 export const Route = createFileRoute("/cadastros")({
   head: () => ({
