@@ -1,25 +1,25 @@
-## Reverter: remover Centro de Custo do fluxo
+## Objetivo
 
-Voltar ao modelo simples onde uma **Obra** tem apenas `id` e `nome`, sem vínculo a Centro de Custo.
+Aplicar a versão colada de `src/routes/cadastros.tsx`, que adiciona um guard: se não houver obra selecionada, redireciona para `/`.
 
-### 1. `src/lib/obra-store.ts`
-Substituir pelo conteúdo colado: tipo `Obra = { id, nome }`, CRUD `addObra(nome)` / `removeObra` / `getObras`, seleção `getObra/setObra/clearObra/obraLabel`, hooks `useObras/useObra/useHydrated`. Remove `CentroCusto`, `obraParaCC`, chave `borabora.centros-custo`.
+## Alterações
 
-### 2. `src/routes/cadastros.tsx` — aba Obras
-- Remover imports `useCentrosCusto, addCentroCusto, removeCentroCusto, obraParaCC` e ícones `ChevronDown, Building2` (manter os ainda usados).
-- Substituir `ObrasTab` por um formulário único: input `Nome da Obra` + botão Salvar → `addObra(nome)`; abaixo, `ListSection` com `obras.map` mostrando `o.nome` e botão remover.
-- Remover passos numerados 1/2 e o divisor.
-- `addObra(...)` passa a receber só `nome`.
+### `src/routes/cadastros.tsx`
+- Adicionar imports: `useNavigate` de `@tanstack/react-router`, e `useObra`, `useHydrated` de `@/lib/obra-store` (somar aos imports atuais de `useObras`, `addObra`, `removeObra`).
+- Em `CadastrosPage`, adicionar:
+  ```ts
+  const navigate = useNavigate();
+  const obra = useObra();
+  const hydrated = useHydrated();
+  useEffect(() => {
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
+  ```
+- Adicionar `useEffect` ao import de `react` (já presente).
+- Demais abas (`ObrasTab`, `EquipamentosTab`, `MaoObraTab`, `FrentesTab`, `ParametrosTab`) e auxiliares (`ListSection`, `ListItem`) permanecem como já estão no arquivo atual — o conteúdo colado é equivalente ao existente, então mantenho a versão atual e só insiro o guard.
 
-### 3. `src/routes/index.tsx` — tela de entrada
-- Remover bloco "Centro de Custo" e o bloco condicional "Obra vinculada".
-- Substituir por um único `Select` de Obras (`useObras()`): valor = `obraId`. Empty-state se `obras.length === 0` apontando para Cadastros.
-- `handleEnter`: `setObra(obraId)` + `setRole(role)` + navigate `/dashboard`. `podeEntrar = !!obraId && !!role`.
-- `useEffect` restaura `obraId` via `getObra()` direto (sem buscar `centroCustoId`).
-- Remover imports `useCentrosCusto, obraParaCC, CheckCircle2, AlertCircle, Label` (Label se não usado em outro lugar — manter se sim).
+### Demais arquivos
+Nenhuma alteração. `obra-store.ts` já exporta `useObra` e `useHydrated`.
 
-### 4. Nenhuma mudança em
-`AppHeader.tsx` (já usa `obraLabel(obra)` simples), `auth-store.ts`, demais rotas, stores de planejamento/apontamento/cadastros/parâmetros.
-
-### Observação
-LocalStorage de centros de custo (`borabora.centros-custo`) fica órfão no navegador do usuário — inofensivo, não precisa migração.
+## Observação
+O texto colado veio com JSX corrompido pela renderização do chat, então não vou copiá-lo literalmente — vou apenas adicionar o guard de redirecionamento ao arquivo atual, que é o efeito real da mudança.
