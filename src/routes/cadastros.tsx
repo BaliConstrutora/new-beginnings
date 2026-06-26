@@ -146,7 +146,7 @@ function EquipesTab() {
     if (!mo) return;
     setMembros((p) => [
       ...p,
-      { maoObraId: mo.id, nome: mo.funcao, funcao: mo.funcao },
+      { maoObraId: mo.id, nome: mo.nome, funcao: mo.funcao },
     ]);
     setMoSelecionadoId("");
   };
@@ -191,8 +191,8 @@ function EquipesTab() {
                 <SelectContent>
                   {disponiveis.map((f) => (
                     <SelectItem key={f.id} value={f.id}>
-                      {f.funcao}
-                      <span className="ml-2 text-xs text-muted-foreground capitalize">{f.categoria}</span>
+                      {f.nome}
+                      <span className="ml-2 text-xs text-muted-foreground">{f.funcao}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -218,7 +218,8 @@ function EquipesTab() {
                 className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2"
               >
                 <div>
-                  <p className="text-sm font-medium text-foreground">{m.funcao}</p>
+                  <p className="text-sm font-medium text-foreground">{m.nome}</p>
+                  <p className="text-xs text-muted-foreground">{m.funcao}</p>
                 </div>
                 <button
                   type="button"
@@ -242,7 +243,7 @@ function EquipesTab() {
           <ListItem
             key={eq.id}
             title={eq.nome}
-            subtitle={`${eq.membros.length} membro${eq.membros.length !== 1 ? "s" : ""} · ${eq.membros.map((m) => m.funcao).join(", ")}`}
+            subtitle={`${eq.membros.length} membro${eq.membros.length !== 1 ? "s" : ""} · ${eq.membros.map((m) => `${m.nome} (${m.funcao})`).join(", ")}`}
             onRemove={() => { removeEquipe(eq.id); toast.success("Equipe removida."); }}
           />
         ))}
@@ -292,41 +293,53 @@ function EquipamentosTab() {
 // ─── Aba Mão de Obra ──────────────────────────────────────────────────────────
 
 function MaoObraTab() {
-  const funcoes = useMaoObra();
+  const profissionais = useMaoObra();
+  const [nome, setNome] = useState("");
   const [funcao, setFuncao] = useState("");
-  const [categoria, setCategoria] = useState<"direta" | "indireta" | "">("");
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!funcao.trim() || !categoria) { toast.error("Preencha função e categoria."); return; }
-    addMaoObra(funcao.trim(), categoria);
+    if (!nome.trim()) { toast.error("Informe o nome do profissional."); return; }
+    if (!funcao.trim()) { toast.error("Informe a função."); return; }
+    addMaoObra(nome.trim(), funcao.trim());
+    setNome("");
     setFuncao("");
-    setCategoria("");
-    toast.success("Função cadastrada!");
+    toast.success("Profissional cadastrado!");
   };
 
   return (
     <div className="space-y-4">
       <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Função</Label>
-          <Input value={funcao} onChange={(e) => setFuncao(e.target.value)} placeholder="Ex: Operador de Escavadeira" className="h-12" />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold">Nome</Label>
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex: Matheus Cunha"
+              className="h-12"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold">Função</Label>
+            <Input
+              value={funcao}
+              onChange={(e) => setFuncao(e.target.value)}
+              placeholder="Ex: Ajudante"
+              className="h-12"
+            />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-sm font-semibold">Categoria</Label>
-          <Select value={categoria} onValueChange={(v) => setCategoria(v as "direta" | "indireta")}>
-            <SelectTrigger className="h-12"><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="direta">Direta (Produção)</SelectItem>
-              <SelectItem value="indireta">Indireta (Apoio)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <Button type="submit" className="h-12 w-full font-bold">Salvar Função</Button>
+        <Button type="submit" className="h-12 w-full font-bold">Cadastrar Profissional</Button>
       </form>
-      <ListSection title="Funções Cadastradas" empty="Nenhuma função cadastrada.">
-        {funcoes.map((m) => (
-          <ListItem key={m.id} title={m.funcao} subtitle={m.categoria === "direta" ? "Direta (Produção)" : "Indireta (Apoio)"} onRemove={() => { removeMaoObra(m.id); toast.success("Função removida."); }} />
+      <ListSection title="Profissionais Cadastrados" empty="Nenhum profissional cadastrado.">
+        {profissionais.map((m) => (
+          <ListItem
+            key={m.id}
+            title={m.nome}
+            subtitle={m.funcao}
+            onRemove={() => { removeMaoObra(m.id); toast.success("Profissional removido."); }}
+          />
         ))}
       </ListSection>
     </div>
