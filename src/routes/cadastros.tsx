@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -35,6 +35,8 @@ import {
   useObras,
   addObra,
   removeObra,
+  useObra,
+  useHydrated,
 } from "@/lib/obra-store";
 import {
   getParametros,
@@ -57,6 +59,13 @@ export const Route = createFileRoute("/cadastros")({
 });
 
 function CadastrosPage() {
+  const navigate = useNavigate();
+  const obra = useObra();
+  const hydrated = useHydrated();
+  useEffect(() => {
+    if (hydrated && !obra) navigate({ to: "/" });
+  }, [hydrated, obra, navigate]);
+
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 px-4 py-5 pb-4">
       <header>
