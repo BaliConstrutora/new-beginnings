@@ -1,29 +1,25 @@
-# Plan: Rewrite entry screen with CC → Obra auto-selection
+## Reverter: remover Centro de Custo do fluxo
 
-Replace `src/routes/index.tsx` with the new flow: user picks a **Centro de Custo**, the linked **Obra** appears automatically (1 obra per CC).
+Voltar ao modelo simples onde uma **Obra** tem apenas `id` e `nome`, sem vínculo a Centro de Custo.
 
-## Structure
+### 1. `src/lib/obra-store.ts`
+Substituir pelo conteúdo colado: tipo `Obra = { id, nome }`, CRUD `addObra(nome)` / `removeObra` / `getObras`, seleção `getObra/setObra/clearObra/obraLabel`, hooks `useObras/useObra/useHydrated`. Remove `CentroCusto`, `obraParaCC`, chave `borabora.centros-custo`.
 
-- Imports: `useCentrosCusto`, `useObras`, `getObra`, `setObra`, `obraParaCC` from `@/lib/obra-store`; `ROLES`, `Role`, `getRole`, `setRole` from `@/lib/auth-store`; `CheckCircle2` added to lucide imports.
-- State: `ccId` (string), `role` (`"" | Role`). Derived: `obraVinculada = ccId ? obraParaCC(ccId) : null`, `ccSelecionado`, `podeEntrar`.
-- `useEffect([obras])`: restores prior selection — `getObra()` → find obra in `obras` → set `ccId` to its `centroCustoId`; restores `role` via `getRole()`.
-- `handleEnter`: guards on `obraVinculada && role`, then `setObra(obraVinculada.id)`, `setRole(role)`, navigate to `/dashboard`.
+### 2. `src/routes/cadastros.tsx` — aba Obras
+- Remover imports `useCentrosCusto, addCentroCusto, removeCentroCusto, obraParaCC` e ícones `ChevronDown, Building2` (manter os ainda usados).
+- Substituir `ObrasTab` por um formulário único: input `Nome da Obra` + botão Salvar → `addObra(nome)`; abaixo, `ListSection` com `obras.map` mostrando `o.nome` e botão remover.
+- Remover passos numerados 1/2 e o divisor.
+- `addObra(...)` passa a receber só `nome`.
 
-## JSX layout (centered card, max-w-md)
+### 3. `src/routes/index.tsx` — tela de entrada
+- Remover bloco "Centro de Custo" e o bloco condicional "Obra vinculada".
+- Substituir por um único `Select` de Obras (`useObras()`): valor = `obraId`. Empty-state se `obras.length === 0` apontando para Cadastros.
+- `handleEnter`: `setObra(obraId)` + `setRole(role)` + navigate `/dashboard`. `podeEntrar = !!obraId && !!role`.
+- `useEffect` restaura `obraId` via `getObra()` direto (sem buscar `centroCustoId`).
+- Remover imports `useCentrosCusto, obraParaCC, CheckCircle2, AlertCircle, Label` (Label se não usado em outro lugar — manter se sim).
 
-1. **Header**: `HardHat` in `bg-primary` rounded square, "Bora Bora" title, "Gestão de Produção" subtitle.
-2. **Card** (`rounded-2xl border bg-card p-5`) with three blocks:
-   - **Perfil de Acesso**: `ROLES.map` grid of 2 buttons (ShieldCheck for `sede`, HardHatIcon for others), active state `border-primary bg-primary/10`.
-   - **Centro de Custo**: empty-state card with link to `/cadastros` when `centrosCusto.length === 0`; otherwise a `<Select>` listing `cc.codigo` (bold) + `cc.nome` (muted).
-   - **Obra (conditional on `ccId`)**: when `obraVinculada` exists, a success row with `CheckCircle2` icon, obra name, and `ccSelecionado` codigo/nome subtitle (green/emerald accent or `bg-primary/5`). When not, an empty-state card pointing to Cadastros.
-   - **Entrar** button: `disabled={!podeEntrar}`, full-width, `size="lg"`.
-3. **Footer**: `© {year} Bora Bora · Uso em campo`.
+### 4. Nenhuma mudança em
+`AppHeader.tsx` (já usa `obraLabel(obra)` simples), `auth-store.ts`, demais rotas, stores de planejamento/apontamento/cadastros/parâmetros.
 
-## Styling
-
-Semantic tokens only (`bg-card`, `border-border`, `text-foreground`, `text-muted-foreground`, `bg-primary`, `text-primary-foreground`, `bg-primary/10`). Success state on Obra block uses `border-emerald-500/40 bg-emerald-500/10` with `text-emerald-700 dark:text-emerald-400` for the check icon, matching the dashboard's adherence palette.
-
-## Out of scope
-
-- No changes to stores, AppHeader, or other routes.
-- No backend wiring.
+### Observação
+LocalStorage de centros de custo (`borabora.centros-custo`) fica órfão no navegador do usuário — inofensivo, não precisa migração.

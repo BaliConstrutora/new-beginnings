@@ -8,7 +8,6 @@ import {
   Settings2,
   Map,
   Building2,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,13 +32,9 @@ import {
   useFrentes,
 } from "@/lib/cadastros-store";
 import {
-  useCentrosCusto,
   useObras,
-  addCentroCusto,
-  removeCentroCusto,
   addObra,
   removeObra,
-  obraParaCC,
 } from "@/lib/obra-store";
 import {
   getParametros,
@@ -54,7 +49,7 @@ export const Route = createFileRoute("/cadastros")({
       {
         name: "description",
         content:
-          "Cadastre centros de custo, obras, equipamentos, funções e parâmetros.",
+          "Cadastre obras, equipamentos, funções, frentes e parâmetros.",
       },
     ],
   }),
@@ -115,192 +110,57 @@ function CadastrosPage() {
 // ─── Aba Obras ────────────────────────────────────────────────────────────────
 
 function ObrasTab() {
-  const centrosCusto = useCentrosCusto();
   const obras = useObras();
+  const [nome, setNome] = useState("");
 
-  const [ccCodigo, setCcCodigo] = useState("");
-  const [ccNome, setCcNome] = useState("");
-
-  const [obraNome, setObraNome] = useState("");
-  const [obraCcId, setObraCcId] = useState("");
-
-  const handleSaveCC = (e: React.FormEvent) => {
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ccCodigo.trim()) {
-      toast.error("Informe o código do centro de custo.");
-      return;
-    }
-    if (!ccNome.trim()) {
-      toast.error("Informe o nome do centro de custo.");
-      return;
-    }
-    addCentroCusto(ccCodigo.trim().toUpperCase(), ccNome.trim());
-    setCcCodigo("");
-    setCcNome("");
-    toast.success("Centro de custo cadastrado!");
-  };
-
-  const handleSaveObra = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!obraCcId) {
-      toast.error("Selecione o centro de custo.");
-      return;
-    }
-    if (!obraNome.trim()) {
+    if (!nome.trim()) {
       toast.error("Informe o nome da obra.");
       return;
     }
-    addObra(obraNome.trim(), obraCcId);
-    setObraNome("");
-    setObraCcId("");
+    addObra(nome.trim());
+    setNome("");
     toast.success("Obra cadastrada!");
   };
 
   return (
-    <div className="space-y-5">
-      {/* ── Passo 1: Centro de Custo ── */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-            1
-          </span>
-          <h2 className="text-base font-bold text-foreground">
-            Centro de Custo
-          </h2>
+    <div className="space-y-4">
+      <form
+        onSubmit={handleSave}
+        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
+      >
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Nome da Obra</Label>
+          <Input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Ex: Rodovia BR-381 Trecho KM 120–180"
+            className="h-12"
+          />
         </div>
+        <Button type="submit" className="h-12 w-full font-bold">
+          Salvar Obra
+        </Button>
+      </form>
 
-        <form
-          onSubmit={handleSaveCC}
-          className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
-        >
-          <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Código</Label>
-            <Input
-              value={ccCodigo}
-              onChange={(e) => setCcCodigo(e.target.value)}
-              placeholder="Ex: CC-2024-0312"
-              className="h-12"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Nome descritivo</Label>
-            <Input
-              value={ccNome}
-              onChange={(e) => setCcNome(e.target.value)}
-              placeholder="Ex: Obras Federais São Paulo"
-              className="h-12"
-            />
-          </div>
-          <Button type="submit" className="h-12 w-full font-bold">
-            Salvar Centro de Custo
-          </Button>
-        </form>
-
-        <ListSection
-          title="Centros de Custo Cadastrados"
-          empty="Nenhum centro de custo cadastrado."
-        >
-          {centrosCusto.map((cc) => {
-            const obraDoCC = obraParaCC(cc.id);
-            return (
-              <ListItem
-                key={cc.id}
-                title={cc.codigo}
-                subtitle={cc.nome}
-                badge={obraDoCC ? obraDoCC.nome : "Sem obra"}
-                onRemove={() => {
-                  removeCentroCusto(cc.id);
-                  toast.success("Centro de custo e obra vinculada removidos.");
-                }}
-              />
-            );
-          })}
-        </ListSection>
-      </section>
-
-      {/* Divisor */}
-      <div className="flex items-center gap-3 py-1">
-        <div className="h-px flex-1 bg-border" />
-        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-        <div className="h-px flex-1 bg-border" />
-      </div>
-
-      {/* ── Passo 2: Obra ── */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2.5">
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-            2
-          </span>
-          <h2 className="text-base font-bold text-foreground">Obra</h2>
-        </div>
-
-        <form
-          onSubmit={handleSaveObra}
-          className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
-        >
-          <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Centro de Custo</Label>
-            {centrosCusto.length === 0 ? (
-              <p className="rounded-xl border-2 border-dashed border-border bg-background p-3 text-center text-sm text-muted-foreground">
-                Cadastre um centro de custo no passo 1 primeiro.
-              </p>
-            ) : (
-              <Select value={obraCcId} onValueChange={setObraCcId}>
-                <SelectTrigger className="h-12">
-                  <SelectValue placeholder="Selecione o CC" />
-                </SelectTrigger>
-                <SelectContent>
-                  {centrosCusto.map((cc) => (
-                    <SelectItem key={cc.id} value={cc.id}>
-                      <span className="font-semibold">{cc.codigo}</span>
-                      <span className="ml-2 text-muted-foreground">
-                        {cc.nome}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm font-semibold">Nome da Obra</Label>
-            <Input
-              value={obraNome}
-              onChange={(e) => setObraNome(e.target.value)}
-              placeholder="Ex: Rodovia BR-381 Trecho KM 120–180"
-              className="h-12"
-              disabled={!obraCcId}
-            />
-          </div>
-          <Button
-            type="submit"
-            className="h-12 w-full font-bold"
-            disabled={centrosCusto.length === 0}
-          >
-            Salvar Obra
-          </Button>
-        </form>
-
-        <ListSection title="Obras Cadastradas" empty="Nenhuma obra cadastrada.">
-          {obras.map((o) => {
-            const cc = centrosCusto.find((c) => c.id === o.centroCustoId);
-            return (
-              <ListItem
-                key={o.id}
-                title={o.nome}
-                subtitle={cc ? `${cc.codigo} — ${cc.nome}` : "Sem CC"}
-                onRemove={() => {
-                  removeObra(o.id);
-                  toast.success("Obra removida.");
-                }}
-              />
-            );
-          })}
-        </ListSection>
-      </section>
+      <ListSection title="Obras Cadastradas" empty="Nenhuma obra cadastrada.">
+        {obras.map((o) => (
+          <ListItem
+            key={o.id}
+            title={o.nome}
+            subtitle="Obra"
+            onRemove={() => {
+              removeObra(o.id);
+              toast.success("Obra removida.");
+            }}
+          />
+        ))}
+      </ListSection>
     </div>
   );
 }
+
 
 // ─── Aba Frentes ──────────────────────────────────────────────────────────────
 
