@@ -60,7 +60,6 @@ type EquipamentoRealizado = {
 type MaoObraRealizada = {
   id: string;
   funcao: string;
-  categoria: string;
   horasNormais: string;
   horasExtras: string;
 };
@@ -185,7 +184,6 @@ function ApontamentoPage() {
         maoObra: maoObraCad.map((m) => ({
           id: m.id,
           funcao: m.funcao,
-          categoria: m.categoria,
           horasNormais: "",
           horasExtras: "",
         })),
@@ -858,9 +856,6 @@ function FormRealizado({
           <div key={mo.id} className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold text-foreground">{mo.funcao}</p>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
-                {mo.categoria}
-              </span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <Field label="Horas normais">
@@ -1226,7 +1221,7 @@ function FormAvulso({
 }: {
   frentes: { id: string; nome: string }[];
   equipamentos: { id: string; prefixo: string; descricao: string }[];
-  maoObra: { id: string; funcao: string; categoria: string }[];
+  maoObra: { id: string; funcao: string }[];
   onVoltar: () => void;
   onSalvar: () => void;
 }) {
