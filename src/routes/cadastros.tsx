@@ -8,7 +8,9 @@ import {
   Settings2,
   Map,
   Building2,
+  UsersRound,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +45,12 @@ import {
   setParametros,
   type ModeloPlanejamento,
 } from "@/lib/parametros-store";
+import {
+  useEquipes,
+  addEquipe,
+  removeEquipe,
+  type MembroEquipe,
+} from "@/lib/equipes-store";
 
 export const Route = createFileRoute("/cadastros")({
   head: () => ({
@@ -78,7 +86,7 @@ function CadastrosPage() {
       </header>
 
       <Tabs defaultValue="obras" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-12">
+        <TabsList className="grid w-full grid-cols-6 h-12">
           <TabsTrigger value="obras" className="text-[11px] font-bold">
             <Building2 className="mr-1 h-4 w-4" /> Obras
           </TabsTrigger>
@@ -87,6 +95,9 @@ function CadastrosPage() {
           </TabsTrigger>
           <TabsTrigger value="mo" className="text-[11px] font-bold">
             <Users className="mr-1 h-4 w-4" /> M.Obra
+          </TabsTrigger>
+          <TabsTrigger value="equipes" className="text-[11px] font-bold">
+            <UsersRound className="mr-1 h-4 w-4" /> Equipes
           </TabsTrigger>
           <TabsTrigger value="frente" className="text-[11px] font-bold">
             <Map className="mr-1 h-4 w-4" /> Frente
@@ -104,6 +115,9 @@ function CadastrosPage() {
         </TabsContent>
         <TabsContent value="mo" className="mt-4">
           <MaoObraTab />
+        </TabsContent>
+        <TabsContent value="equipes" className="mt-4">
+          <EquipesTab />
         </TabsContent>
         <TabsContent value="frente" className="mt-4">
           <FrentesTab />
@@ -434,6 +448,113 @@ function MaoObraTab() {
             }}
           />
         ))}
+      </ListSection>
+    </div>
+  );
+}
+
+// ─── Aba Equipes ──────────────────────────────────────────────────────────────
+
+function EquipesTab() {
+  const equipes = useEquipes();
+  const funcoes = useMaoObra();
+  const [nome, setNome] = useState("");
+  const [selecionados, setSelecionados] = useState<Record<string, boolean>>({});
+
+  const toggle = (id: string) =>
+    setSelecionados((s) => ({ ...s, [id]: !s[id] }));
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome.trim()) {
+      toast.error("Informe o nome da equipe.");
+      return;
+    }
+    const membros: MembroEquipe[] = funcoes
+      .filter((f) => selecionados[f.id])
+      .map((f) => ({ maoObraId: f.id, nome: f.funcao, funcao: f.funcao }));
+    if (membros.length === 0) {
+      toast.error("Selecione pelo menos um membro.");
+      return;
+    }
+    addEquipe(nome.trim(), membros);
+    setNome("");
+    setSelecionados({});
+    toast.success("Equipe cadastrada!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <form
+        onSubmit={handleSave}
+        className="space-y-3 rounded-2xl border-2 border-border bg-card p-4"
+      >
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Nome da Equipe</Label>
+          <Input
+            value={nome}
+            onChange={(e) => setNome(e.target.value)}
+            placeholder="Ex: Equipe Pavimentação A"
+            className="h-12"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-sm font-semibold">Membros</Label>
+          {funcoes.length === 0 ? (
+            <p className="rounded-xl border-2 border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+              Cadastre funções na aba M.Obra antes de montar uma equipe.
+            </p>
+          ) : (
+            <ul className="space-y-1.5">
+              {funcoes.map((f) => (
+                <li
+                  key={f.id}
+                  className="flex items-center gap-3 rounded-xl border border-border bg-background p-3"
+                >
+                  <Checkbox
+                    id={`m-${f.id}`}
+                    checked={!!selecionados[f.id]}
+                    onCheckedChange={() => toggle(f.id)}
+                  />
+                  <label
+                    htmlFor={`m-${f.id}`}
+                    className="flex flex-1 cursor-pointer items-center justify-between gap-2"
+                  >
+                    <span className="font-semibold text-foreground">
+                      {f.funcao}
+                    </span>
+                    <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      {f.categoria === "direta" ? "Direta" : "Indireta"}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <Button type="submit" className="h-12 w-full font-bold">
+          Salvar Equipe
+        </Button>
+      </form>
+
+      <ListSection
+        title="Equipes Cadastradas"
+        empty="Nenhuma equipe cadastrada."
+      >
+        {equipes.map((eq) => {
+          const nomes = eq.membros.map((m) => m.funcao).join(", ");
+          return (
+            <ListItem
+              key={eq.id}
+              title={eq.nome}
+              subtitle={`${eq.membros.length} membro${eq.membros.length === 1 ? "" : "s"}${nomes ? " — " + nomes : ""}`}
+              onRemove={() => {
+                removeEquipe(eq.id);
+                toast.success("Equipe removida.");
+              }}
+            />
+          );
+        })}
       </ListSection>
     </div>
   );
