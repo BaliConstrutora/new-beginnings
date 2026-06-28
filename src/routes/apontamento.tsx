@@ -186,13 +186,13 @@ function ApontamentoPage() {
         })),
         maoObra: maoObraCad.map((m) => ({
           id: m.id,
-          funcao: m.funcao,
+          funcao: m.nome ? `${m.nome} — ${m.funcao}` : m.funcao,
           horasNormais: "",
           horasExtras: "",
         })),
         salvo: false,
-        equipeId: (s as any).equipeId,
-        equipeNome: (s as any).equipeNome,
+        equipeId: s.equipeId,
+        equipeNome: s.equipeNome,
         equipeConfirmacao: undefined,
         equipeSubstitutaId: undefined,
       };
