@@ -1,260 +1,230 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Download } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { toast } from "sonner";
 
 export const Route = createFileRoute("/relatorios")({
   component: RelatoriosPage,
 });
 
-const rdoMock = [
-  { data: "12/06/2026", frente: "Terraplenagem KM 12", clima: "Ensolarado", mo: 14, equip: "TR-01, ESC-02" },
-  { data: "13/06/2026", frente: "Drenagem KM 14", clima: "Nublado", mo: 9, equip: "RET-01" },
-  { data: "14/06/2026", frente: "Pavimentação KM 10", clima: "Chuva fraca", mo: 18, equip: "RC-01, CB-03, CB-04" },
-  { data: "15/06/2026", frente: "Terraplenagem KM 13", clima: "Ensolarado", mo: 12, equip: "TR-01, MN-01" },
-];
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const producaoMock = [
-  { servico: "Escavação comum", un: "m³", ei: 100, ef: 150, qtd: 1250 },
-  { servico: "Aterro compactado", un: "m³", ei: 100, ef: 150, qtd: 980 },
-  { servico: "Imprimação", un: "m²", ei: 80, ef: 110, qtd: 3200 },
-  { servico: "BGS - Base", un: "m³", ei: 80, ef: 110, qtd: 540 },
-];
+const APONTAMENTO_KEY = "borabora.apontamento";
 
-const frotaMock = [
-  { equip: "TR-01 - Trator Esteira", ht: 42, hp: 6, diesel: 820 },
-  { equip: "ESC-02 - Escavadeira", ht: 38, hp: 4, diesel: 690 },
-  { equip: "RC-01 - Rolo Compactador", ht: 30, hp: 2, diesel: 410 },
-  { equip: "CB-03 - Caminhão Basculante", ht: 45, hp: 3, diesel: 530 },
-];
+type ServicoRealizado = {
+  id: string;
+  servico: string;
+  unidade: string;
+  metaQuantidade?: string;
+  realizado: string;
+  estacaInicial: string;
+  estacaFinal: string;
+};
 
-const moMock = [
-  { cat: "Direta", funcao: "Operador de Escavadeira", hn: 176, he: 22 },
-  { cat: "Direta", funcao: "Servente", hn: 352, he: 18 },
-  { cat: "Direta", funcao: "Motorista Basculante", hn: 264, he: 31 },
-  { cat: "Indireta", funcao: "Encarregado", hn: 176, he: 8 },
-  { cat: "Indireta", funcao: "Apontador", hn: 176, he: 4 },
-];
+type ApontamentoSalvo = {
+  data: string;
+  frente: string;
+  servicos: ServicoRealizado[];
+};
 
-function exportCSV(filename: string, rows: (string | number)[][]) {
-  const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast.success(`${filename} exportado`);
+function loadStore(): Record<string, ApontamentoSalvo> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(APONTAMENTO_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
 }
 
-function ExportButton({ onClick }: { onClick: () => void }) {
-  return (
-    <Button
-      onClick={onClick}
-      className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto"
-    >
-      <Download className="h-4 w-4" />
-      Exportar CSV
-    </Button>
-  );
+function calcAderencia(servicos: ServicoRealizado[]): number | null {
+  const validos = servicos.filter((s) => {
+    const meta = parseFloat(s.metaQuantidade ?? "0");
+    return meta > 0;
+  });
+  if (!validos.length) return null;
+  const soma = validos.reduce((acc, s) => {
+    const meta = parseFloat(s.metaQuantidade ?? "0");
+    const real = parseFloat(s.realizado) || 0;
+    return acc + Math.min(real / meta, 1);
+  }, 0);
+  return Math.round((soma / validos.length) * 100);
 }
+
+function formatDataLonga(isoDate: string): string {
+  const date = new Date(`${isoDate}T12:00:00`);
+  return date.toLocaleDateString("pt-BR", {
+    weekday: "short", day: "2-digit", month: "short", year: "numeric",
+  });
+}
+
+function aderenciaColor(v: number | null) {
+  if (v === null) return "text-muted-foreground";
+  if (v >= 95) return "text-emerald-600";
+  if (v >= 80) return "text-primary";
+  return "text-red-500";
+}
+
+function barColor(pct: number | null) {
+  if (pct == null) return "bg-muted";
+  if (pct >= 95) return "bg-emerald-500";
+  if (pct >= 80) return "bg-primary";
+  return "bg-red-400";
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 function RelatoriosPage() {
-  const today = new Date().toISOString().slice(0, 10);
-  const [dataInicial, setDataInicial] = useState("");
-  const [dataFinal, setDataFinal] = useState(today);
+  const hoje = new Date().toISOString().split("T")[0];
+  const umMesAtras = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    .toISOString().split("T")[0];
+
+  const [dataInicio, setDataInicio] = useState(umMesAtras);
+  const [dataFim, setDataFim] = useState(hoje);
+  const [filtro, setFiltro] = useState({ inicio: umMesAtras, fim: hoje });
+
+  const dias = useMemo(() => {
+    const store = loadStore();
+    return Object.values(store)
+      .filter((a) => a.data >= filtro.inicio && a.data <= filtro.fim)
+      .sort((a, b) => b.data.localeCompare(a.data));
+  }, [filtro]);
+
+  const totalItens = dias.reduce((acc, d) => acc + d.servicos.length, 0);
+  const mediaGeral = useMemo(() => {
+    const todos = dias.flatMap((d) => d.servicos);
+    return calcAderencia(todos);
+  }, [dias]);
 
   return (
-    <div className="min-h-screen pb-24 bg-background">
-      <main className="mx-auto max-w-screen-sm px-4 py-4 space-y-4">
-        <section className="rounded-xl border-2 border-border bg-card p-4 space-y-3">
-          <h2 className="text-sm font-bold uppercase tracking-wide">Filtro</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label htmlFor="di" className="text-xs">Data Inicial</Label>
-              <Input id="di" type="date" value={dataInicial} onChange={(e) => setDataInicial(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="df" className="text-xs">Data Final</Label>
-              <Input id="df" type="date" value={dataFinal} onChange={(e) => setDataFinal(e.target.value)} />
-            </div>
+    <div className="space-y-5 pb-6">
+      <header>
+        <h1 className="text-2xl font-bold">Relatórios</h1>
+        <p className="text-sm text-muted-foreground">Histórico de apontamentos</p>
+      </header>
+
+      {/* Filtro */}
+      <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+          Filtrar por período
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label className="text-xs">Data início</Label>
+            <Input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="h-10"
+            />
           </div>
-          <Button
-            className="w-full h-11 font-bold"
-            onClick={() => toast.success("Filtro aplicado")}
-          >
-            Filtrar
-          </Button>
-        </section>
-
-        <Tabs defaultValue="rdo" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-auto">
-            <TabsTrigger value="rdo" className="text-xs py-2">RDO</TabsTrigger>
-            <TabsTrigger value="prod" className="text-xs py-2">Produção</TabsTrigger>
-            <TabsTrigger value="frota" className="text-xs py-2">Frota</TabsTrigger>
-            <TabsTrigger value="mo" className="text-xs py-2">Mão Obra</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="rdo" className="space-y-3">
-            <ExportButton
-              onClick={() =>
-                exportCSV("rdo-consolidado.csv", [
-                  ["Data", "Frente de Serviço", "Clima", "Total MO", "Equipamentos"],
-                  ...rdoMock.map((r) => [r.data, r.frente, r.clima, r.mo, r.equip]),
-                ])
-              }
+          <div className="space-y-1">
+            <Label className="text-xs">Data fim</Label>
+            <Input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="h-10"
             />
-            <div className="rounded-xl border-2 border-border bg-card overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">Data</TableHead>
-                    <TableHead className="whitespace-nowrap">Frente</TableHead>
-                    <TableHead className="whitespace-nowrap">Clima</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">MO</TableHead>
-                    <TableHead className="whitespace-nowrap">Equipamentos</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {rdoMock.map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="whitespace-nowrap font-medium">{r.data}</TableCell>
-                      <TableCell className="whitespace-nowrap">{r.frente}</TableCell>
-                      <TableCell className="whitespace-nowrap">{r.clima}</TableCell>
-                      <TableCell className="text-right">{r.mo}</TableCell>
-                      <TableCell className="whitespace-nowrap">{r.equip}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+          </div>
+        </div>
+        <Button
+          onClick={() => setFiltro({ inicio: dataInicio, fim: dataFim })}
+          className="w-full h-10 font-bold gap-2"
+        >
+          <Search className="h-4 w-4" /> Filtrar
+        </Button>
+      </div>
 
-          <TabsContent value="prod" className="space-y-3">
-            <ExportButton
-              onClick={() =>
-                exportCSV("producao-fisica.csv", [
-                  ["Serviço", "Unidade", "Estaca Inicial", "Estaca Final", "Qtd Acumulada"],
-                  ...producaoMock.map((r) => [r.servico, r.un, r.ei, r.ef, r.qtd]),
-                ])
-              }
-            />
-            <div className="rounded-xl border-2 border-border bg-card overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">Serviço</TableHead>
-                    <TableHead className="whitespace-nowrap">Un.</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">Est. Ini.</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">Est. Fin.</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">Qtd Acum.</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {producaoMock.map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="whitespace-nowrap font-medium">{r.servico}</TableCell>
-                      <TableCell>{r.un}</TableCell>
-                      <TableCell className="text-right">{r.ei}</TableCell>
-                      <TableCell className="text-right">{r.ef}</TableCell>
-                      <TableCell className="text-right font-bold">{r.qtd.toLocaleString("pt-BR")}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+      {/* Resumo do período */}
+      {dias.length > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Dias</p>
+            <p className="mt-1 text-xl font-bold text-foreground">{dias.length}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Itens</p>
+            <p className="mt-1 text-xl font-bold text-foreground">{totalItens}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Aderência</p>
+            <p className={`mt-1 text-xl font-bold ${aderenciaColor(mediaGeral)}`}>
+              {mediaGeral != null ? `${mediaGeral}%` : "—"}
+            </p>
+          </div>
+        </div>
+      )}
 
-          <TabsContent value="frota" className="space-y-3">
-            <ExportButton
-              onClick={() =>
-                exportCSV("controle-frota.csv", [
-                  ["Equipamento", "Horas Trabalhadas", "Horas Paradas", "Diesel (L)"],
-                  ...frotaMock.map((r) => [r.equip, r.ht, r.hp, r.diesel]),
-                ])
-              }
-            />
-            <div className="rounded-xl border-2 border-border bg-card overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">Equipamento</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">H. Trab.</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">H. Parad.</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">Diesel (L)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {frotaMock.map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="whitespace-nowrap font-medium">{r.equip}</TableCell>
-                      <TableCell className="text-right">{r.ht}</TableCell>
-                      <TableCell className="text-right">{r.hp}</TableCell>
-                      <TableCell className="text-right font-bold">{r.diesel}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
+      {/* Lista */}
+      {dias.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-border bg-card p-8 text-center">
+          <p className="text-sm text-muted-foreground">
+            Nenhum apontamento no período selecionado.
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Salve apontamentos para que apareçam aqui.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-5">
+          {dias.map((dia) => {
+            const ader = calcAderencia(dia.servicos);
+            return (
+              <div key={dia.data} className="space-y-2">
+                <div className="flex items-center justify-between border-b border-border pb-1.5">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground capitalize">
+                    {formatDataLonga(dia.data)}
+                  </p>
+                  <span className={`text-xs font-bold ${aderenciaColor(ader)}`}>
+                    {ader != null ? `Aderência: ${ader}%` : "—"}
+                  </span>
+                </div>
 
-          <TabsContent value="mo" className="space-y-3">
-            <ExportButton
-              onClick={() =>
-                exportCSV("mao-de-obra.csv", [
-                  ["Categoria", "Função", "Horas Normais", "Horas Extras"],
-                  ...moMock.map((r) => [r.cat, r.funcao, r.hn, r.he]),
-                ])
-              }
-            />
-            <div className="rounded-xl border-2 border-border bg-card overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="whitespace-nowrap">Categoria</TableHead>
-                    <TableHead className="whitespace-nowrap">Função</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">H. Normais</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">H. Extras</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {moMock.map((r, i) => (
-                    <TableRow key={i}>
-                      <TableCell>
-                        <span
-                          className={`inline-block rounded px-2 py-0.5 text-xs font-bold ${
-                            r.cat === "Direta"
-                              ? "bg-primary/15 text-primary"
-                              : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {r.cat}
+                {dia.servicos.map((s) => {
+                  const meta = parseFloat(s.metaQuantidade ?? "0");
+                  const real = parseFloat(s.realizado) || 0;
+                  const pct = meta > 0 ? Math.round(Math.min(real / meta, 1) * 100) : null;
+
+                  return (
+                    <div
+                      key={s.id}
+                      className="rounded-xl border border-border bg-card p-3 space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-foreground truncate">
+                            {s.servico}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {s.estacaInicial} → {s.estacaFinal}
+                          </p>
+                        </div>
+                        <span className={`text-sm font-bold shrink-0 ${aderenciaColor(pct)}`}>
+                          {pct != null ? `${pct}%` : "—"}
                         </span>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap font-medium">{r.funcao}</TableCell>
-                      <TableCell className="text-right">{r.hn}</TableCell>
-                      <TableCell className="text-right font-bold">{r.he}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </main>
+                      </div>
+
+                      <p className="text-[11px] text-muted-foreground">
+                        {real.toFixed(1)} {s.unidade} de {meta.toFixed(1)} {s.unidade} planejados
+                      </p>
+
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={`h-full rounded-full ${barColor(pct)}`}
+                          style={{ width: `${pct ?? 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

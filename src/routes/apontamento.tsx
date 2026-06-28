@@ -293,6 +293,18 @@ function ApontamentoPage() {
 
   // ---- TELA LISTA ----
   if (tela === "lista") {
+    const apontadosHoje = itensDoDia.filter((i) => i.salvo);
+    const pendentes = itensDoDia.filter((i) => !i.salvo);
+    const aderenciaMedia = apontadosHoje.length > 0
+      ? Math.round(
+          apontadosHoje.reduce((acc, i) => {
+            const real = parseFloat(i.quantidadeRealizada) || 0;
+            const meta = i.volumePlanejado || 0;
+            return acc + (meta > 0 ? Math.min(real / meta, 1) : 0);
+          }, 0) / apontadosHoje.length * 100
+        )
+      : null;
+
     return (
       <div className="mx-auto w-full max-w-2xl space-y-4 px-4 py-5">
         <div className="flex items-center gap-3">
@@ -304,30 +316,25 @@ function ApontamentoPage() {
             <ArrowLeft className="h-4 w-4" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-foreground">Itens planejados</h1>
+            <h1 className="text-lg font-bold text-foreground">Apontamento do dia</h1>
             <p className="text-xs text-muted-foreground">{hojeLabel}</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-border bg-card p-3">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Total planejado
-            </p>
-            <p className="mt-1 text-xl font-bold text-foreground">
-              {itensDoDia.length}{" "}
-              <span className="text-xs font-normal text-muted-foreground">itens</span>
-            </p>
+        {/* Resumo */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Itens</p>
+            <p className="mt-1 text-xl font-bold text-foreground">{itensDoDia.length}</p>
           </div>
-          <div className="rounded-2xl border border-border bg-card p-3">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-              Apontados hoje
-            </p>
-            <p className="mt-1 text-xl font-bold text-foreground">
-              {apontados}{" "}
-              <span className="text-xs font-normal text-muted-foreground">
-                de {itensDoDia.length}
-              </span>
+          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Apontados</p>
+            <p className="mt-1 text-xl font-bold text-emerald-600">{apontadosHoje.length}</p>
+          </div>
+          <div className="rounded-2xl border border-border bg-card p-3 text-center">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Aderência</p>
+            <p className="mt-1 text-xl font-bold text-primary">
+              {aderenciaMedia != null ? `${aderenciaMedia}%` : "—"}
             </p>
           </div>
         </div>
@@ -336,9 +343,7 @@ function ApontamentoPage() {
           <div className="rounded-2xl border-2 border-yellow-200 bg-yellow-50 p-5 space-y-4">
             <div className="flex items-center gap-2">
               <span className="text-lg">⚠️</span>
-              <p className="text-sm font-bold text-yellow-800">
-                Planejamento não confirmado
-              </p>
+              <p className="text-sm font-bold text-yellow-800">Planejamento não confirmado</p>
             </div>
             <p className="text-xs text-yellow-700 leading-relaxed">
               Para apontar a produção do dia, confirme o planejamento primeiro:
@@ -367,14 +372,44 @@ function ApontamentoPage() {
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {itensDoDia.map((item) => (
-              <ItemPlanejadoCard
-                key={item.itemId}
-                item={item}
-                onSelecionar={() => handleSelecionarItem(item)}
-              />
-            ))}
+          <div className="space-y-4">
+            {/* Apontados */}
+            {apontadosHoje.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Apontados hoje</p>
+                  <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    {apontadosHoje.length} de {itensDoDia.length}
+                  </span>
+                </div>
+                {apontadosHoje.map((item) => (
+                  <ItemPlanejadoCard
+                    key={item.itemId}
+                    item={item}
+                    onSelecionar={() => handleSelecionarItem(item)}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Pendentes */}
+            {pendentes.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Pendentes</p>
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
+                    {pendentes.length}
+                  </span>
+                </div>
+                {pendentes.map((item) => (
+                  <ItemPlanejadoCard
+                    key={item.itemId}
+                    item={item}
+                    onSelecionar={() => handleSelecionarItem(item)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
