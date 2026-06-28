@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
+  Pencil,
   Trash2,
   Lock,
   Calculator,
@@ -15,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import { useObra, useHydrated, obraLabel } from "@/lib/obra-store";
+import { useRole } from "@/lib/auth-store";
 import { useFrentes } from "@/lib/cadastros-store";
 import { useEquipes } from "@/lib/equipe-store";
 import { savePlanejamento, uid } from "@/lib/planejamento-store";
@@ -82,6 +84,8 @@ function PlanejamentoPage() {
   const obra = useObra();
   const hydrated = useHydrated();
   const frentesCad = useFrentes();
+  const role = useRole();
+  const isSede = role === "sede";
 
   useEffect(() => {
     if (hydrated && !obra) navigate({ to: "/" });
@@ -91,6 +95,7 @@ function PlanejamentoPage() {
   const [itens, setItens] = useState<ItemPlanejado[]>([]);
   const [filtroData, setFiltroData] = useState("");
   const [hojeLabel, setHojeLabel] = useState("");
+  const [itemEditando, setItemEditando] = useState<ItemPlanejado | null>(null);
 
   useEffect(() => {
     setItens(loadItens());
@@ -109,8 +114,25 @@ function PlanejamentoPage() {
   const toggleSection = (i: number) =>
     setOpenSections((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]));
 
-  const adicionarItem = (item: ItemPlanejado) => setItens((p) => [item, ...p]);
+  const adicionarItem = (item: ItemPlanejado) => {
+    setItens((p) => {
+      const idx = p.findIndex((x) => x.id === item.id);
+      if (idx >= 0) {
+        const copia = [...p];
+        copia[idx] = item;
+        return copia;
+      }
+      return [item, ...p];
+    });
+    setItemEditando(null);
+  };
+
   const removerItem = (id: string) => setItens((p) => p.filter((i) => i.id !== id));
+  const editarItem = (item: ItemPlanejado) => {
+    setItemEditando(item);
+    setOpenSections((p) => (p.includes(1) ? p : [...p, 1]));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const itensDoDia = itens.filter((i) => i.data === filtroData);
   const frentesDisponiveis = useMemo(() => frentesCad.map((f) => f.nome), [frentesCad]);
@@ -222,10 +244,15 @@ function PlanejamentoPage() {
 
         {/* Seção 1 — Novo item */}
         <section className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <SectionHeader number="1" title="Adicionar item planejado" isOpen={openSections.includes(1)} onToggle={() => toggleSection(1)} />
+          <SectionHeader number="1" title={itemEditando ? "Editando item" : "Adicionar item planejado"} isOpen={openSections.includes(1)} onToggle={() => toggleSection(1)} />
           {openSections.includes(1) && (
             <div className="px-4 pb-4">
-              <FormNovoItem onSalvar={adicionarItem} frentesDisponiveis={frentesDisponiveis} />
+              <FormNovoItem
+                onSalvar={adicionarItem}
+                frentesDisponiveis={frentesDisponiveis}
+                itemEditando={itemEditando}
+                onCancelarEdicao={() => setItemEditando(null)}
+              />
             </div>
           )}
         </section>
@@ -251,7 +278,13 @@ function PlanejamentoPage() {
               ) : (
                 <div className="space-y-2">
                   {itensDoDia.map((item) => (
-                    <ItemPlanejadoCard key={item.id} item={item} onRemover={removerItem} />
+                    <ItemPlanejadoCard
+                      key={item.id}
+                      item={item}
+                      isSede={isSede}
+                      onRemover={removerItem}
+                      onEditar={editarItem}
+                    />
                   ))}
                 </div>
               )}
@@ -307,20 +340,39 @@ function CampoCalculado({ label, valor, unidade }: { label: string; valor: numbe
 
 // ─── ItemPlanejadoCard ────────────────────────────────────────────────────────
 
-function ItemPlanejadoCard({ item, onRemover }: { item: ItemPlanejado; onRemover: (id: string) => void }) {
+function ItemPlanejadoCard({
+  item,
+  isSede,
+  onRemover,
+  onEditar,
+}: {
+  item: ItemPlanejado;
+  isSede: boolean;
+  onRemover: (id: string) => void;
+  onEditar: (item: ItemPlanejado) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   return (
     <div className="border border-gray-100 rounded-xl overflow-hidden">
-      <button type="button" onClick={() => setExpanded((v) => !v)} className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 transition-colors text-left">
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 transition-colors text-left"
+      >
         <div>
           <div className="text-sm font-semibold text-gray-900">{item.frente}</div>
-          <div className="text-[11px] text-gray-500">{item.descricao || `${item.refIni} → ${item.refFim}`}</div>
+          <div className="text-[11px] text-gray-500">
+            {item.descricao || `${item.refIni} → ${item.refFim}`}
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">{item.qtdPlanejada} {item.unidade}</span>
+          <span className="text-[11px] font-medium bg-orange-50 text-orange-700 px-2 py-0.5 rounded-full">
+            {item.qtdPlanejada} {item.unidade}
+          </span>
           {expanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
         </div>
       </button>
+
       {expanded && (
         <div className="px-3 pb-3 pt-1 space-y-2 bg-gray-50/50">
           <div className="grid grid-cols-3 gap-2 text-[11px]">
@@ -339,9 +391,31 @@ function ItemPlanejadoCard({ item, onRemover }: { item: ItemPlanejado; onRemover
               <span className="text-[11px] font-medium text-orange-700">Equipe: {item.equipeNome}</span>
             </div>
           )}
-          <button type="button" onClick={() => onRemover(item.id)} className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-600 transition-colors">
-            <Trash2 size={12} /> Remover item
+        </div>
+      )}
+
+      {/* Ações */}
+      {isSede ? (
+        <div className="flex border-t border-gray-100">
+          <button
+            type="button"
+            onClick={() => { onEditar(item); }}
+            className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[11px] font-semibold text-orange-500 hover:bg-orange-50 transition-colors"
+          >
+            <Pencil size={13} /> Editar
           </button>
+          <div className="w-px bg-gray-100" />
+          <button
+            type="button"
+            onClick={() => onRemover(item.id)}
+            className="flex flex-1 items-center justify-center gap-1.5 py-2.5 text-[11px] font-semibold text-red-400 hover:bg-red-50 transition-colors"
+          >
+            <Trash2 size={13} /> Excluir
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center gap-1.5 border-t border-gray-100 bg-gray-50/60 py-2 text-[11px] text-gray-400 italic">
+          <Lock size={11} /> Somente leitura
         </div>
       )}
     </div>
@@ -362,16 +436,42 @@ const FORM_VAZIO: FormState = {
   densidade: "", equipeId: "",
 };
 
-function FormNovoItem({ onSalvar, frentesDisponiveis }: {
-  onSalvar: (item: ItemPlanejado) => void; frentesDisponiveis: string[];
+function FormNovoItem({
+  onSalvar,
+  frentesDisponiveis,
+  itemEditando,
+  onCancelarEdicao,
+}: {
+  onSalvar: (item: ItemPlanejado) => void;
+  frentesDisponiveis: string[];
+  itemEditando?: ItemPlanejado | null;
+  onCancelarEdicao?: () => void;
 }) {
   const equipes = useEquipes();
   const [form, setForm] = useState<FormState>(FORM_VAZIO);
   const [openSections, setOpenSections] = useState<number[]>([0, 1]);
 
   useEffect(() => {
-    setForm((f) => f.data ? f : { ...f, data: new Date().toISOString().split("T")[0] });
-  }, []);
+    if (itemEditando) {
+      setForm({
+        data: itemEditando.data,
+        frenteNome: itemEditando.frente,
+        descricao: itemEditando.descricao,
+        refIni: itemEditando.refIni,
+        refFim: itemEditando.refFim,
+        faixa: itemEditando.faixa || "",
+        pista: itemEditando.pista || "",
+        comprimento: String(itemEditando.comprimento),
+        largura: String(itemEditando.largura),
+        espessura: String(itemEditando.espessura),
+        densidade: String(itemEditando.densidade),
+        equipeId: itemEditando.equipeId || "",
+      });
+      setOpenSections([0, 1, 2]);
+    } else {
+      setForm((f) => f.data ? f : { ...f, data: new Date().toISOString().split("T")[0] });
+    }
+  }, [itemEditando]);
 
   const toggleSec = (i: number) =>
     setOpenSections((p) => (p.includes(i) ? p.filter((x) => x !== i) : [...p, i]));
@@ -390,7 +490,7 @@ function FormNovoItem({ onSalvar, frentesDisponiveis }: {
 
   const handleSalvar = () => {
     const novoItem: ItemPlanejado = {
-      id: uid(),
+      id: itemEditando ? itemEditando.id : uid(),
       frente: form.frenteNome,
       descricao: form.descricao.trim(),
       servico: form.frenteNome,
@@ -412,7 +512,11 @@ function FormNovoItem({ onSalvar, frentesDisponiveis }: {
     };
     onSalvar(novoItem);
     setForm({ ...FORM_VAZIO, data: form.data });
-    toast.success("Item adicionado ao planejamento.");
+    if (itemEditando) {
+      toast.success("Item atualizado!");
+    } else {
+      toast.success("Item adicionado ao planejamento.");
+    }
   };
 
   return (
@@ -565,9 +669,18 @@ function FormNovoItem({ onSalvar, frentesDisponiveis }: {
         )}
       </div>
 
+      {itemEditando && onCancelarEdicao && (
+        <button
+          type="button"
+          onClick={onCancelarEdicao}
+          className="w-full flex items-center justify-center gap-2 border border-gray-200 bg-gray-50 text-gray-600 font-semibold py-3 rounded-2xl text-sm transition-all hover:bg-gray-100"
+        >
+          Cancelar edição
+        </button>
+      )}
       <button type="button" disabled={!podeSalvar} onClick={handleSalvar} className="w-full flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-200 disabled:text-gray-400 active:scale-[0.98] text-white font-semibold py-3 rounded-2xl text-sm transition-all">
         <Plus size={16} />
-        Adicionar ao planejamento
+        {itemEditando ? "Salvar alterações" : "Adicionar ao planejamento"}
       </button>
     </div>
   );
