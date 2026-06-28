@@ -20,6 +20,7 @@ import { useEquipamentos, useMaoObra, useFrentes } from "@/lib/cadastros-store";
 import { usePlanejamento } from "@/lib/planejamento-store";
 import { saveApontamento } from "@/lib/apontamento-store";
 import { useEquipes } from "@/lib/equipe-store";
+import { useCarreteiros } from "@/lib/carreteiro-store";
 
 export const Route = createFileRoute("/apontamento")({
   head: () => ({
@@ -1129,6 +1130,7 @@ function CargaCard({
   onRemove: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const carreteiros = useCarreteiros();
 
   const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1154,14 +1156,29 @@ function CargaCard({
 
       <div className="grid grid-cols-3 gap-2">
         <Field label="Placa">
-          <input
-            type="text"
-            value={carga.placa}
-            onChange={(e) => onChange({ placa: e.target.value.toUpperCase() })}
-            placeholder="ABC1D23"
-            maxLength={8}
-            className="h-10 w-full rounded-lg border border-input px-2 text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-indigo-400"
-          />
+          {carreteiros.length === 0 ? (
+            <input
+              type="text"
+              value={carga.placa}
+              onChange={(e) => onChange({ placa: e.target.value.toUpperCase() })}
+              placeholder="ABC1D23"
+              maxLength={8}
+              className="h-10 w-full rounded-lg border border-input px-2 text-xs font-mono uppercase focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            />
+          ) : (
+            <select
+              value={carga.placa}
+              onChange={(e) => onChange({ placa: e.target.value })}
+              className="h-10 w-full rounded-lg border border-indigo-300 bg-indigo-50 px-2 text-xs font-mono font-bold uppercase text-indigo-700 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+            >
+              <option value="">Selecionar</option>
+              {carreteiros.map((c) => (
+                <option key={c.id} value={c.placa}>
+                  {c.placa} — {c.motorista}
+                </option>
+              ))}
+            </select>
+          )}
         </Field>
         <Field label="Hora">
           <input

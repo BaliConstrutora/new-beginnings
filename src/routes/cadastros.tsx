@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Trash2, Wrench, Users, Settings2, Map, Building2, HardHat, X, Plus } from "lucide-react";
+import { Trash2, Wrench, Users, Settings2, Map, Building2, HardHat, X, Plus, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,7 @@ import {
   useEquipes,
   type MembroEquipe,
 } from "@/lib/equipe-store";
+import { addCarreteiro, removeCarreteiro, useCarreteiros } from "@/lib/carreteiro-store";
 
 export const Route = createFileRoute("/cadastros")({
   head: () => ({
@@ -63,7 +64,7 @@ function CadastrosPage() {
       </header>
 
       <Tabs defaultValue="obras" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 h-12">
+        <TabsList className="grid w-full grid-cols-7 h-12">
           <TabsTrigger value="obras" className="text-[10px] font-bold px-1">
             <Building2 className="mr-0.5 h-3.5 w-3.5" /> Obras
           </TabsTrigger>
@@ -79,6 +80,9 @@ function CadastrosPage() {
           <TabsTrigger value="equipe" className="text-[10px] font-bold px-1">
             <HardHat className="mr-0.5 h-3.5 w-3.5" /> Equipe
           </TabsTrigger>
+          <TabsTrigger value="carret" className="text-[10px] font-bold px-1">
+            <Truck className="mr-0.5 h-3.5 w-3.5" /> Carret.
+          </TabsTrigger>
           <TabsTrigger value="param" className="text-[10px] font-bold px-1">
             <Settings2 className="mr-0.5 h-3.5 w-3.5" /> Param.
           </TabsTrigger>
@@ -89,6 +93,7 @@ function CadastrosPage() {
         <TabsContent value="mo" className="mt-4"><MaoObraTab /></TabsContent>
         <TabsContent value="frente" className="mt-4"><FrentesTab /></TabsContent>
         <TabsContent value="equipe" className="mt-4"><EquipesTab /></TabsContent>
+        <TabsContent value="carret" className="mt-4"><CarreteirosTab /></TabsContent>
         <TabsContent value="param" className="mt-4"><ParametrosTab /></TabsContent>
       </Tabs>
     </div>
@@ -372,6 +377,67 @@ function FrentesTab() {
       <ListSection title="Frentes Cadastradas" empty="Nenhuma frente cadastrada.">
         {frentes.map((f) => (
           <ListItem key={f.id} title={f.nome} subtitle="Frente de Serviço" onRemove={() => { removeFrente(f.id); toast.success("Frente removida."); }} />
+        ))}
+      </ListSection>
+    </div>
+  );
+}
+
+// ─── Aba Parâmetros ───────────────────────────────────────────────────────────
+
+// ─── Aba Carreteiros ──────────────────────────────────────────────────────────
+
+function CarreteirosTab() {
+  const carreteiros = useCarreteiros();
+  const [placa, setPlaca] = useState("");
+  const [motorista, setMotorista] = useState("");
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!placa.trim()) { toast.error("Informe a placa."); return; }
+    if (!motorista.trim()) { toast.error("Informe o nome do motorista."); return; }
+    addCarreteiro(placa.trim(), motorista.trim());
+    setPlaca("");
+    setMotorista("");
+    toast.success("Carreteiro cadastrado!");
+  };
+
+  return (
+    <div className="space-y-4">
+      <form onSubmit={handleSave} className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold">Placa</Label>
+            <Input
+              value={placa}
+              onChange={(e) => setPlaca(e.target.value.toUpperCase())}
+              placeholder="ABC-1234"
+              className="h-12 font-mono font-bold tracking-wider"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-semibold">Nome do motorista</Label>
+            <Input
+              value={motorista}
+              onChange={(e) => setMotorista(e.target.value)}
+              placeholder="Ex: José Pereira"
+              className="h-12"
+            />
+          </div>
+        </div>
+        <Button type="submit" className="h-12 w-full font-bold">
+          Cadastrar Carreteiro
+        </Button>
+      </form>
+
+      <ListSection title="Carreteiros Cadastrados" empty="Nenhum carreteiro cadastrado.">
+        {carreteiros.map((c) => (
+          <ListItem
+            key={c.id}
+            title={c.placa}
+            subtitle={c.motorista}
+            onRemove={() => { removeCarreteiro(c.id); toast.success("Carreteiro removido."); }}
+          />
         ))}
       </ListSection>
     </div>
