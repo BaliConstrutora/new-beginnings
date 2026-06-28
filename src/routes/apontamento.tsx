@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  Calendar,
   Camera,
   CheckCircle2,
   ChevronDown,
@@ -331,11 +332,38 @@ function ApontamentoPage() {
         </div>
 
         {itensDoDia.length === 0 ? (
-          <div className="rounded-2xl border-2 border-dashed border-border bg-card p-8 text-center">
-            <ClipboardList className="mx-auto h-8 w-8 text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Nenhum item planejado para hoje.
+          <div className="rounded-2xl border-2 border-yellow-200 bg-yellow-50 p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">⚠️</span>
+              <p className="text-sm font-bold text-yellow-800">
+                Planejamento não confirmado
+              </p>
+            </div>
+            <p className="text-xs text-yellow-700 leading-relaxed">
+              Para apontar a produção do dia, confirme o planejamento primeiro:
             </p>
+            <div className="space-y-2">
+              {[
+                "Vá em Planejamento",
+                "Adicione os itens do dia",
+                'Clique em "Confirmar planejamento do dia"',
+                "Volte ao Apontamento",
+              ].map((step, i) => (
+                <div key={i} className="flex items-center gap-2.5">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-[10px] font-bold text-white">
+                    {i + 1}
+                  </span>
+                  <span className="text-xs text-yellow-800" dangerouslySetInnerHTML={{ __html: step.replace(/\"([^\"]+)\"/g, '<strong>$1</strong>').replace(/Planejamento/g, '<strong>Planejamento</strong>').replace(/Apontamento/g, '<strong>Apontamento</strong>') }} />
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/planejamento" })}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-yellow-400 py-2.5 text-sm font-bold text-yellow-900 hover:bg-yellow-500 transition-colors"
+            >
+              <Calendar className="h-4 w-4" /> Ir para o Planejamento
+            </button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -805,6 +833,17 @@ function FormRealizado({
         </button>
       </div>
 
+      {/* Confirmação de equipe (opcional — só aparece se houver equipe planejada) */}
+      {form.equipeNome && (
+        <EquipeConfirmBlock
+          equipeNome={form.equipeNome}
+          confirmacao={form.equipeConfirmacao}
+          equipeSubstitutaId={form.equipeSubstitutaId}
+          onConfirmacao={(v) => setForm((p) => ({ ...p, equipeConfirmacao: p.equipeConfirmacao === v ? undefined : v }))}
+          onSubstituta={(id) => setForm((p) => ({ ...p, equipeSubstitutaId: id }))}
+        />
+      )}
+
       {/* Equipamentos */}
       <div className="space-y-3 rounded-2xl border-2 border-border bg-card p-4">
         <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
@@ -824,17 +863,6 @@ function FormRealizado({
           Em breve
         </p>
       </div>
-
-      {/* Confirmação de equipe (opcional — só aparece se houver equipe planejada) */}
-      {form.equipeNome && (
-        <EquipeConfirmBlock
-          equipeNome={form.equipeNome}
-          confirmacao={form.equipeConfirmacao}
-          equipeSubstitutaId={form.equipeSubstitutaId}
-          onConfirmacao={(v) => setForm((p) => ({ ...p, equipeConfirmacao: p.equipeConfirmacao === v ? undefined : v }))}
-          onSubstituta={(id) => setForm((p) => ({ ...p, equipeSubstitutaId: id }))}
-        />
-      )}
 
       <button
         type="button"
